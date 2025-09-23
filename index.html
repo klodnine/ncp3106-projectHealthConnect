@@ -1,0 +1,749 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Healthcare Community Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0a0a0a;
+            color: #ffffff;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #333;
+        }
+
+        .header h1 {
+            color: #3b82f6;
+            font-size: 2rem;
+            font-weight: 600;
+        }
+
+        .nav-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+            border-bottom: 1px solid #333;
+        }
+
+        .nav-tab {
+            padding: 12px 24px;
+            background: transparent;
+            border: none;
+            color: #888;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            transition: all 0.3s ease;
+        }
+
+        .nav-tab.active {
+            color: #3b82f6;
+            border-bottom-color: #3b82f6;
+        }
+
+        .nav-tab:hover {
+            color: #60a5fa;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .metric-card {
+            background: #1a1a1a;
+            border: 1px solid #333;
+            border-radius: 12px;
+            padding: 24px;
+            transition: all 0.3s ease;
+        }
+
+        .metric-card:hover {
+            border-color: #3b82f6;
+            transform: translateY(-2px);
+        }
+
+        .metric-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .metric-title {
+            color: #888;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        .metric-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #ffffff;
+            margin-bottom: 8px;
+        }
+
+        .metric-change {
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .metric-change.positive {
+            color: #10b981;
+        }
+
+        .metric-change.negative {
+            color: #ef4444;
+        }
+
+        .status-badge {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .status-good {
+            background: #10b98120;
+            color: #10b981;
+        }
+
+        .status-warning {
+            background: #f59e0b20;
+            color: #f59e0b;
+        }
+
+        .status-critical {
+            background: #ef444420;
+            color: #ef4444;
+        }
+
+        .charts-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .chart-container {
+            background: #1a1a1a;
+            border: 1px solid #333;
+            border-radius: 12px;
+            padding: 24px;
+        }
+
+        .chart-title {
+            color: #ffffff;
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 20px;
+        }
+
+        .alerts-section {
+            background: #1a1a1a;
+            border: 1px solid #333;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 30px;
+        }
+
+        .alert-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px;
+            background: #0f0f0f;
+            border-radius: 8px;
+            margin-bottom: 12px;
+            border-left: 4px solid #3b82f6;
+        }
+
+        .alert-content h4 {
+            color: #ffffff;
+            font-size: 0.95rem;
+            margin-bottom: 4px;
+        }
+
+        .alert-content p {
+            color: #888;
+            font-size: 0.85rem;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background: #3b82f6;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #2563eb;
+        }
+
+        .btn-secondary {
+            background: #374151;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #4b5563;
+        }
+
+        .form-section {
+            background: #1a1a1a;
+            border: 1px solid #333;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 20px;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            display: block;
+            color: #ffffff;
+            font-size: 0.9rem;
+            font-weight: 500;
+            margin-bottom: 8px;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 12px;
+            background: #0f0f0f;
+            border: 1px solid #333;
+            border-radius: 6px;
+            color: #ffffff;
+            font-size: 0.9rem;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: #3b82f6;
+        }
+
+        .resource-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .resource-card {
+            background: #1a1a1a;
+            border: 1px solid #333;
+            border-radius: 12px;
+            padding: 20px;
+        }
+
+        .resource-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .resource-name {
+            color: #ffffff;
+            font-weight: 600;
+        }
+
+        .stock-level {
+            width: 100%;
+            height: 8px;
+            background: #333;
+            border-radius: 4px;
+            margin: 12px 0;
+            overflow: hidden;
+        }
+
+        .stock-fill {
+            height: 100%;
+            border-radius: 4px;
+            transition: width 0.3s ease;
+        }
+
+        .stock-high {
+            background: #10b981;
+        }
+
+        .stock-medium {
+            background: #f59e0b;
+        }
+
+        .stock-low {
+            background: #ef4444;
+        }
+
+        @media (max-width: 768px) {
+            .charts-section {
+                grid-template-columns: 1fr;
+            }
+            
+            .nav-tabs {
+                flex-wrap: wrap;
+            }
+            
+            .header {
+                flex-direction: column;
+                gap: 15px;
+                text-align: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>Healthcare Community Dashboard</h1>
+            <div class="status-badge status-good">System Online</div>
+        </header>
+
+        <nav class="nav-tabs">
+            <button class="nav-tab active" onclick="showTab('dashboard')">Dashboard</button>
+            <button class="nav-tab" onclick="showTab('patients')">Patient Data</button>
+            <button class="nav-tab" onclick="showTab('resources')">Resources</button>
+            <button class="nav-tab" onclick="showTab('training')">Training</button>
+            <button class="nav-tab" onclick="showTab('advocacy')">Advocacy</button>
+        </nav>
+
+         Dashboard Tab 
+        <div id="dashboard" class="tab-content active">
+            <div class="metrics-grid">
+                <div class="metric-card">
+                    <div class="metric-header">
+                        <span class="metric-title">Total Patients</span>
+                        <span class="status-badge status-good">Active</span>
+                    </div>
+                    <div class="metric-value">2,847</div>
+                    <div class="metric-change positive">↗ +12% from last month</div>
+                </div>
+
+                <div class="metric-card">
+                    <div class="metric-header">
+                        <span class="metric-title">Critical Cases</span>
+                        <span class="status-badge status-warning">Monitor</span>
+                    </div>
+                    <div class="metric-value">23</div>
+                    <div class="metric-change negative">↗ +3 from yesterday</div>
+                </div>
+
+                <div class="metric-card">
+                    <div class="metric-header">
+                        <span class="metric-title">Recovery Rate</span>
+                        <span class="status-badge status-good">Excellent</span>
+                    </div>
+                    <div class="metric-value">94.2%</div>
+                    <div class="metric-change positive">↗ +2.1% improvement</div>
+                </div>
+
+                <div class="metric-card">
+                    <div class="metric-header">
+                        <span class="metric-title">Resource Utilization</span>
+                        <span class="status-badge status-good">Optimal</span>
+                    </div>
+                    <div class="metric-value">78%</div>
+                    <div class="metric-change positive">↗ Efficient usage</div>
+                </div>
+            </div>
+
+            <div class="charts-section">
+                <div class="chart-container">
+                    <h3 class="chart-title">Patient Vital Signs Trend</h3>
+                    <canvas id="vitalsChart" width="400" height="200"></canvas>
+                </div>
+                <div class="chart-container">
+                    <h3 class="chart-title">Condition Distribution</h3>
+                    <canvas id="conditionsChart" width="400" height="200"></canvas>
+                </div>
+            </div>
+
+            <div class="alerts-section">
+                <h3 class="chart-title">Priority Alerts</h3>
+                <div class="alert-item">
+                    <div class="alert-content">
+                        <h4>Medication Stock Low</h4>
+                        <p>Insulin supplies running low - 3 days remaining</p>
+                    </div>
+                    <button class="btn btn-primary" onclick="showAlert('Medication reorder initiated!')">Reorder</button>
+                </div>
+                <div class="alert-item">
+                    <div class="alert-content">
+                        <h4>Equipment Maintenance Due</h4>
+                        <p>MRI Machine #2 scheduled for maintenance</p>
+                    </div>
+                    <button class="btn btn-secondary" onclick="showAlert('Maintenance scheduled!')">Schedule</button>
+                </div>
+                <div class="alert-item">
+                    <div class="alert-content">
+                        <h4>Staff Training Reminder</h4>
+                        <p>5 staff members need CPR certification renewal</p>
+                    </div>
+                    <button class="btn btn-primary" onclick="showAlert('Training reminder sent!')">Notify</button>
+                </div>
+            </div>
+        </div>
+
+         Patient Data Tab 
+        <div id="patients" class="tab-content">
+            <div class="form-section">
+                <h3 class="chart-title">Add New Patient</h3>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label class="form-label">Patient Name</label>
+                        <input type="text" class="form-input" placeholder="Enter full name">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Date of Birth</label>
+                        <input type="date" class="form-input">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Medical ID</label>
+                        <input type="text" class="form-input" placeholder="Auto-generated">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Primary Condition</label>
+                        <select class="form-input">
+                            <option>Select condition</option>
+                            <option>Diabetes</option>
+                            <option>Hypertension</option>
+                            <option>Heart Disease</option>
+                            <option>Respiratory</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Emergency Contact</label>
+                        <input type="tel" class="form-input" placeholder="Phone number">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Insurance Provider</label>
+                        <input type="text" class="form-input" placeholder="Insurance company">
+                    </div>
+                </div>
+                <button class="btn btn-primary" onclick="showAlert('Patient record created successfully!')">Add Patient</button>
+            </div>
+
+            <div class="metrics-grid">
+                <div class="metric-card">
+                    <div class="metric-header">
+                        <span class="metric-title">New Patients Today</span>
+                    </div>
+                    <div class="metric-value">12</div>
+                    <div class="metric-change positive">↗ Above average</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-header">
+                        <span class="metric-title">Pending Updates</span>
+                    </div>
+                    <div class="metric-value">8</div>
+                    <div class="metric-change">Records need review</div>
+                </div>
+            </div>
+        </div>
+
+         Resources Tab 
+        <div id="resources" class="tab-content">
+            <div class="resource-grid">
+                <div class="resource-card">
+                    <div class="resource-header">
+                        <span class="resource-name">Medical Supplies</span>
+                        <span class="status-badge status-good">In Stock</span>
+                    </div>
+                    <div>Surgical Masks: 2,450 units</div>
+                    <div class="stock-level">
+                        <div class="stock-fill stock-high" style="width: 85%"></div>
+                    </div>
+                    <button class="btn btn-secondary" onclick="showAlert('Supply details opened!')">View Details</button>
+                </div>
+
+                <div class="resource-card">
+                    <div class="resource-header">
+                        <span class="resource-name">Medications</span>
+                        <span class="status-badge status-warning">Low Stock</span>
+                    </div>
+                    <div>Insulin: 45 vials remaining</div>
+                    <div class="stock-level">
+                        <div class="stock-fill stock-low" style="width: 25%"></div>
+                    </div>
+                    <button class="btn btn-primary" onclick="showAlert('Reorder request submitted!')">Reorder</button>
+                </div>
+
+                <div class="resource-card">
+                    <div class="resource-header">
+                        <span class="resource-name">Equipment</span>
+                        <span class="status-badge status-good">Operational</span>
+                    </div>
+                    <div>Ventilators: 8/10 available</div>
+                    <div class="stock-level">
+                        <div class="stock-fill stock-high" style="width: 80%"></div>
+                    </div>
+                    <button class="btn btn-secondary" onclick="showAlert('Equipment status checked!')">Check Status</button>
+                </div>
+
+                <div class="resource-card">
+                    <div class="resource-header">
+                        <span class="resource-name">PPE Supplies</span>
+                        <span class="status-badge status-warning">Monitor</span>
+                    </div>
+                    <div>N95 Masks: 180 units</div>
+                    <div class="stock-level">
+                        <div class="stock-fill stock-medium" style="width: 45%"></div>
+                    </div>
+                    <button class="btn btn-primary" onclick="showAlert('PPE reorder initiated!')">Reorder</button>
+                </div>
+            </div>
+        </div>
+
+         Training Tab 
+        <div id="training" class="tab-content">
+            <div class="metrics-grid">
+                <div class="metric-card">
+                    <div class="metric-header">
+                        <span class="metric-title">Active Modules</span>
+                    </div>
+                    <div class="metric-value">15</div>
+                    <div class="metric-change">Training programs available</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-header">
+                        <span class="metric-title">Completion Rate</span>
+                    </div>
+                    <div class="metric-value">87%</div>
+                    <div class="metric-change positive">↗ +5% this month</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-header">
+                        <span class="metric-title">Certifications Due</span>
+                    </div>
+                    <div class="metric-value">23</div>
+                    <div class="metric-change">Staff renewals needed</div>
+                </div>
+            </div>
+
+            <div class="form-section">
+                <h3 class="chart-title">Training Modules</h3>
+                <div class="alert-item">
+                    <div class="alert-content">
+                        <h4>CPR & First Aid Certification</h4>
+                        <p>Essential life-saving techniques - 4 hours</p>
+                    </div>
+                    <button class="btn btn-primary" onclick="showAlert('Training module started!')">Start Module</button>
+                </div>
+                <div class="alert-item">
+                    <div class="alert-content">
+                        <h4>Infection Control Protocols</h4>
+                        <p>Updated safety procedures - 2 hours</p>
+                    </div>
+                    <button class="btn btn-primary" onclick="showAlert('Training module started!')">Start Module</button>
+                </div>
+                <div class="alert-item">
+                    <div class="alert-content">
+                        <h4>Patient Communication Skills</h4>
+                        <p>Effective patient interaction - 3 hours</p>
+                    </div>
+                    <button class="btn btn-primary" onclick="showAlert('Training module started!')">Start Module</button>
+                </div>
+            </div>
+        </div>
+
+         Advocacy Tab 
+        <div id="advocacy" class="tab-content">
+            <div class="metrics-grid">
+                <div class="metric-card">
+                    <div class="metric-header">
+                        <span class="metric-title">Active Campaigns</span>
+                    </div>
+                    <div class="metric-value">7</div>
+                    <div class="metric-change">Community initiatives</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-header">
+                        <span class="metric-title">Impact Score</span>
+                    </div>
+                    <div class="metric-value">92</div>
+                    <div class="metric-change positive">↗ Excellent reach</div>
+                </div>
+            </div>
+
+            <div class="form-section">
+                <h3 class="chart-title">Advocacy Tools</h3>
+                <div class="alert-item">
+                    <div class="alert-content">
+                        <h4>Generate Health Report</h4>
+                        <p>Create community health summary for stakeholders</p>
+                    </div>
+                    <button class="btn btn-primary" onclick="showAlert('Report generated successfully!')">Generate</button>
+                </div>
+                <div class="alert-item">
+                    <div class="alert-content">
+                        <h4>Contact Directory</h4>
+                        <p>Access healthcare officials and community leaders</p>
+                    </div>
+                    <button class="btn btn-secondary" onclick="showAlert('Directory opened!')">View Contacts</button>
+                </div>
+                <div class="alert-item">
+                    <div class="alert-content">
+                        <h4>Communication Templates</h4>
+                        <p>Pre-written messages for health campaigns</p>
+                    </div>
+                    <button class="btn btn-secondary" onclick="showAlert('Templates loaded!')">View Templates</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Tab switching functionality
+        function showTab(tabName) {
+            // Hide all tab contents
+            const tabContents = document.querySelectorAll('.tab-content');
+            tabContents.forEach(tab => tab.classList.remove('active'));
+            
+            // Remove active class from all tabs
+            const tabs = document.querySelectorAll('.nav-tab');
+            tabs.forEach(tab => tab.classList.remove('active'));
+            
+            // Show selected tab content
+            document.getElementById(tabName).classList.add('active');
+            
+            // Add active class to clicked tab
+            event.target.classList.add('active');
+        }
+
+        // Demo alert functionality
+        function showAlert(message) {
+            alert(message);
+        }
+
+        // Initialize charts when page loads
+        window.addEventListener('load', function() {
+            // Vitals Chart
+            const vitalsCtx = document.getElementById('vitalsChart').getContext('2d');
+            new Chart(vitalsCtx, {
+                type: 'line',
+                data: {
+                    labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+                    datasets: [{
+                        label: 'Average Heart Rate',
+                        data: [72, 75, 70, 78, 74, 76, 73],
+                        borderColor: '#3b82f6',
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        tension: 0.4
+                    }, {
+                        label: 'Blood Pressure (Systolic)',
+                        data: [120, 118, 122, 125, 119, 121, 120],
+                        borderColor: '#10b981',
+                        backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            labels: {
+                                color: '#ffffff'
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            ticks: {
+                                color: '#888'
+                            },
+                            grid: {
+                                color: '#333'
+                            }
+                        },
+                        y: {
+                            ticks: {
+                                color: '#888'
+                            },
+                            grid: {
+                                color: '#333'
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Conditions Chart
+            const conditionsCtx = document.getElementById('conditionsChart').getContext('2d');
+            new Chart(conditionsCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Diabetes', 'Hypertension', 'Heart Disease', 'Respiratory', 'Other'],
+                    datasets: [{
+                        data: [30, 25, 20, 15, 10],
+                        backgroundColor: [
+                            '#3b82f6',
+                            '#10b981',
+                            '#f59e0b',
+                            '#ef4444',
+                            '#8b5cf6'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            labels: {
+                                color: '#ffffff'
+                            }
+                        }
+                    }
+                }
+            });
+        });
+    </script>
+</body>
+</html>
