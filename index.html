@@ -6,6 +6,7 @@
     <title>Healthcare Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <script>
         tailwind.config = {
             theme: {
@@ -37,7 +38,6 @@
         .tab-content.active {
             display: block;
         }
-        /* Added styles for view switching */
         .view {
             display: none;
         }
@@ -47,25 +47,68 @@
     </style>
 </head>
 <body class="bg-background">
-    <!-- Login View -->
-    <div id="loginView" class="view active">
+    <div id="roleSelectionView" class="view active">
         <div class="min-h-screen flex items-center justify-center relative overflow-hidden bg-black">
-            <!-- Background gradient overlay -->
             <div class="absolute inset-0 bg-gradient-to-b from-black via-black/95 to-black/90"></div>
-
-            <!-- Subtle grid pattern -->
             <div class="absolute inset-0 opacity-[0.02]" style="background-image: radial-gradient(circle at 1px 1px, white 1px, transparent 0); background-size: 40px 40px;"></div>
 
-            <div class="relative z-10 w-full max-w-md px-6">
-                <!-- Logo/Brand -->
+            <div class="relative z-10 w-full max-w-2xl px-6">
                 <div class="text-center mb-12">
                     <h1 class="text-5xl font-bold text-primary mb-2 tracking-tight">HEALTHCARE</h1>
                     <p class="text-muted text-sm">Community Dashboard</p>
                 </div>
 
-                <!-- Login Card -->
                 <div class="bg-black/60 backdrop-blur-sm border border-border rounded-lg p-8 shadow-2xl">
-                    <h2 class="text-2xl font-semibold text-foreground mb-6">Sign In</h2>
+                    <h2 class="text-3xl font-semibold text-foreground mb-4 text-center">Welcome</h2>
+                    <p class="text-lg text-muted mb-8 text-center">Are you a healthcare worker?</p>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <button
+                            id="yesHealthcareBtn"
+                            class="h-32 bg-primary hover:bg-primary/90 text-white font-semibold text-xl rounded-lg transition-all hover:scale-105 flex flex-col items-center justify-center gap-3"
+                        >
+                            <i data-lucide="user-check" class="w-12 h-12"></i>
+                            <span>Yes, I am</span>
+                        </button>
+                        
+                        <button
+                            id="noHealthcareBtn"
+                            class="h-32 bg-secondary hover:bg-secondary/80 border-2 border-border hover:border-primary/50 text-foreground font-semibold text-xl rounded-lg transition-all hover:scale-105 flex flex-col items-center justify-center gap-3"
+                        >
+                            <i data-lucide="eye" class="w-12 h-12"></i>
+                            <span>No, just viewing</span>
+                        </button>
+                    </div>
+
+                    <div class="mt-8 pt-6 border-t border-border">
+                        <p class="text-muted text-sm text-center leading-relaxed">
+                            Healthcare workers can input and manage data after authentication.<br>
+                            Viewers can access all dashboard metrics without an account.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+ 
+    <div id="loginView" class="view">
+        <div class="min-h-screen flex items-center justify-center relative overflow-hidden bg-black">
+            <div class="absolute inset-0 bg-gradient-to-b from-black via-black/95 to-black/90"></div>
+            <div class="absolute inset-0 opacity-[0.02]" style="background-image: radial-gradient(circle at 1px 1px, white 1px, transparent 0); background-size: 40px 40px;"></div>
+
+            <div class="relative z-10 w-full max-w-md px-6">
+                <div class="text-center mb-12">
+                    <h1 class="text-5xl font-bold text-primary mb-2 tracking-tight">HEALTHCARE</h1>
+                    <p class="text-muted text-sm">Community Dashboard</p>
+                </div>
+
+                <div class="bg-black/60 backdrop-blur-sm border border-border rounded-lg p-8 shadow-2xl">
+                    <div class="flex items-center justify-between mb-6">
+                        <h2 class="text-2xl font-semibold text-foreground">Healthcare Worker Sign In</h2>
+                        <button id="backToRoleBtn" class="text-muted hover:text-foreground transition-colors">
+                            <i data-lucide="arrow-left" class="w-5 h-5"></i>
+                        </button>
+                    </div>
 
                     <form id="loginForm" class="space-y-5">
                         <div class="space-y-2">
@@ -114,7 +157,7 @@
 
                     <div class="mt-8 pt-6 border-t border-border">
                         <p class="text-muted text-sm text-center">
-                            New to Healthcare?
+                            New healthcare worker?
                             <a href="#" class="text-foreground hover:underline font-medium ml-1">
                                 Sign up now
                             </a>
@@ -122,7 +165,6 @@
                     </div>
                 </div>
 
-                <!-- Footer text -->
                 <p class="text-center text-muted text-xs mt-8 leading-relaxed">
                     This page is protected by authentication to ensure the security of your healthcare data.
                 </p>
@@ -130,25 +172,25 @@
         </div>
     </div>
 
-    <!-- Dashboard View -->
     <div id="dashboardView" class="view">
-        <!-- Header -->
         <header class="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-50">
             <div class="container mx-auto px-6 py-4 flex items-center justify-between">
                 <h1 class="text-2xl font-bold text-primary">Healthcare Community Dashboard</h1>
                 <div class="flex items-center gap-4">
+                    <span id="userRoleBadge" class="px-3 py-1 text-sm rounded-full bg-green-500/10 text-green-500 border border-green-500/20">
+                         Role badge will be set dynamically 
+                    </span>
                     <span class="px-3 py-1 text-sm rounded-full bg-green-500/10 text-green-500 border border-green-500/20">
                         System Online
                     </span>
                     <button id="logoutBtn" class="flex items-center gap-2 px-4 py-2 text-sm text-muted hover:text-foreground transition-colors rounded-md hover:bg-secondary">
                         <i data-lucide="log-out" class="w-4 h-4"></i>
-                        Log Out
+                        <span id="logoutBtnText">Log Out</span>
                     </button>
                 </div>
             </div>
         </header>
 
-        <!-- Navigation Tabs -->
         <nav class="border-b border-border bg-card/30">
             <div class="container mx-auto px-6">
                 <div class="flex gap-1">
@@ -171,85 +213,229 @@
             </div>
         </nav>
 
-        <!-- Main Content -->
         <main class="container mx-auto px-6 py-8">
-            <!-- Dashboard Tab -->
+            <div id="readOnlyNotice" class="hidden mb-6 p-4 bg-blue-500/10 border border-blue-500/20 rounded-lg">
+                <div class="flex items-center gap-3">
+                    <i data-lucide="info" class="w-5 h-5 text-blue-500"></i>
+                    <div>
+                        <h3 class="text-sm font-semibold text-blue-500">Viewing Mode</h3>
+                        <p class="text-xs text-muted mt-1">You are viewing the dashboard in read-only mode. To input or edit data, please sign in as a healthcare worker.</p>
+                    </div>
+                </div>
+            </div>
+ 
             <div id="dashboard" class="tab-content active">
                 <div class="space-y-8">
-                    <!-- Metrics Grid -->
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                        <!-- Metric Card 1 -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div class="bg-card border border-border rounded-lg p-6 hover:border-primary/50 transition-colors">
                             <div class="flex items-center justify-between mb-4">
-                                <h3 class="text-sm font-medium text-muted">Total Patients</h3>
-                                <span class="px-2 py-1 text-xs rounded-full bg-green-500/10 text-green-500 border border-green-500/20">Active</span>
+                                <div>
+                                    <h3 class="text-sm font-medium text-muted uppercase tracking-wide">Total Patients</h3>
+                                    <div class="flex items-center gap-2 mt-2">
+                                        <div class="text-3xl font-bold text-foreground">2,847</div>
+                                        <span class="px-2 py-1 text-xs rounded-full bg-green-500/10 text-green-500 border border-green-500/20">Active</span>
+                                    </div>
+                                </div>
+                                <div class="w-12 h-12 rounded-full bg-blue-500/10 flex items-center justify-center">
+                                    <i data-lucide="users" class="w-6 h-6 text-blue-500"></i>
+                                </div>
                             </div>
-                            <div class="flex items-center gap-2 mb-2">
-                                <i data-lucide="users" class="w-5 h-5 text-muted"></i>
-                                <div class="text-3xl font-bold text-foreground">2,847</div>
+                            <div class="h-48 mt-4">
+                                <canvas id="patientsChart"></canvas>
                             </div>
-                            <p class="text-sm text-green-500 flex items-center gap-1">
-                                <i data-lucide="trending-up" class="w-4 h-4"></i>
-                                +12%
-                            </p>
+                            <div class="mt-4 pt-4 border-t border-border">
+                                <p class="text-sm text-green-500 flex items-center gap-1">
+                                    <i data-lucide="trending-up" class="w-4 h-4"></i>
+                                    +12% from last week
+                                </p>
+                                <div class="mt-2 text-xs text-muted">Daily Avg: 406 patients</div>
+                            </div>
                         </div>
 
-                        <!-- Metric Card 2 -->
                         <div class="bg-card border border-border rounded-lg p-6 hover:border-primary/50 transition-colors">
                             <div class="flex items-center justify-between mb-4">
-                                <h3 class="text-sm font-medium text-muted">Critical Cases</h3>
-                                <span class="px-2 py-1 text-xs rounded-full bg-yellow-500/10 text-yellow-500 border border-yellow-500/20">Monitor</span>
+                                <div>
+                                    <h3 class="text-sm font-medium text-muted uppercase tracking-wide">Critical Cases</h3>
+                                    <div class="flex items-center gap-2 mt-2">
+                                        <div class="text-3xl font-bold text-foreground">23</div>
+                                        <span class="px-2 py-1 text-xs rounded-full bg-yellow-500/10 text-yellow-500 border border-yellow-500/20">Monitor</span>
+                                    </div>
+                                </div>
+                                <div class="w-12 h-12 rounded-full bg-red-500/10 flex items-center justify-center">
+                                    <i data-lucide="activity" class="w-6 h-6 text-red-500"></i>
+                                </div>
                             </div>
-                            <div class="flex items-center gap-2 mb-2">
-                                <i data-lucide="activity" class="w-5 h-5 text-muted"></i>
-                                <div class="text-3xl font-bold text-foreground">23</div>
+                            <div class="h-48 mt-4">
+                                <canvas id="criticalChart"></canvas>
                             </div>
-                            <p class="text-sm text-green-500 flex items-center gap-1">
-                                <i data-lucide="trending-up" class="w-4 h-4"></i>
-                                +3
-                            </p>
+                            <div class="mt-4 pt-4 border-t border-border">
+                                <p class="text-sm text-red-500 flex items-center gap-1">
+                                    <i data-lucide="trending-up" class="w-4 h-4"></i>
+                                    +3 since yesterday
+                                </p>
+                                <div class="mt-2 text-xs text-muted">ICU Capacity: 68%</div>
+                            </div>
                         </div>
 
-                        <!-- Metric Card 3 -->
                         <div class="bg-card border border-border rounded-lg p-6 hover:border-primary/50 transition-colors">
                             <div class="flex items-center justify-between mb-4">
-                                <h3 class="text-sm font-medium text-muted">Recovery Rate</h3>
-                                <span class="px-2 py-1 text-xs rounded-full bg-green-500/10 text-green-500 border border-green-500/20">Excellent</span>
+                                <div>
+                                    <h3 class="text-sm font-medium text-muted uppercase tracking-wide">Recovery Rate</h3>
+                                    <div class="flex items-center gap-2 mt-2">
+                                        <div class="text-3xl font-bold text-foreground">94.2%</div>
+                                        <span class="px-2 py-1 text-xs rounded-full bg-green-500/10 text-green-500 border border-green-500/20">Excellent</span>
+                                    </div>
+                                </div>
+                                <div class="w-12 h-12 rounded-full bg-green-500/10 flex items-center justify-center">
+                                    <i data-lucide="heart" class="w-6 h-6 text-green-500"></i>
+                                </div>
                             </div>
-                            <div class="flex items-center gap-2 mb-2">
-                                <i data-lucide="heart" class="w-5 h-5 text-muted"></i>
-                                <div class="text-3xl font-bold text-foreground">94.2%</div>
+                            <div class="h-48 mt-4 flex items-center justify-center">
+                                <canvas id="recoveryChart"></canvas>
                             </div>
-                            <p class="text-sm text-green-500 flex items-center gap-1">
-                                <i data-lucide="trending-up" class="w-4 h-4"></i>
-                                +2.1%
-                            </p>
+                            <div class="mt-4 pt-4 border-t border-border">
+                                <p class="text-sm text-green-500 flex items-center gap-1">
+                                    <i data-lucide="trending-up" class="w-4 h-4"></i>
+                                    +2.1% this month
+                                </p>
+                                <div class="mt-2 text-xs text-muted">Discharged: 2,681 patients</div>
+                            </div>
                         </div>
 
-                        <!-- Metric Card 4 -->
                         <div class="bg-card border border-border rounded-lg p-6 hover:border-primary/50 transition-colors">
                             <div class="flex items-center justify-between mb-4">
-                                <h3 class="text-sm font-medium text-muted">Resource Utilization</h3>
-                                <span class="px-2 py-1 text-xs rounded-full bg-green-500/10 text-green-500 border border-green-500/20">Optimal</span>
+                                <div>
+                                    <h3 class="text-sm font-medium text-muted uppercase tracking-wide">Resource Utilization</h3>
+                                    <div class="flex items-center gap-2 mt-2">
+                                        <div class="text-3xl font-bold text-foreground">78%</div>
+                                        <span class="px-2 py-1 text-xs rounded-full bg-green-500/10 text-green-500 border border-green-500/20">Optimal</span>
+                                    </div>
+                                </div>
+                                <div class="w-12 h-12 rounded-full bg-purple-500/10 flex items-center justify-center">
+                                    <i data-lucide="package" class="w-6 h-6 text-purple-500"></i>
+                                </div>
                             </div>
-                            <div class="flex items-center gap-2 mb-2">
-                                <i data-lucide="package" class="w-5 h-5 text-muted"></i>
-                                <div class="text-3xl font-bold text-foreground">78%</div>
+                            <div class="h-48 mt-4 flex items-center justify-center">
+                                <canvas id="resourceChart"></canvas>
                             </div>
-                            <p class="text-sm text-muted">Efficient</p>
+                            <div class="mt-4 pt-4 border-t border-border">
+                                <p class="text-sm text-muted">Efficient usage</p>
+                                <div class="mt-2 text-xs text-muted">Budget: ₱2.4M spent</div>
+                            </div>
                         </div>
                     </div>
 
-                    <!-- Alerts Section -->
+                    <div class="bg-card border border-border rounded-lg p-6">
+                        <div class="flex items-center justify-between mb-6">
+                            <h2 class="text-xl font-semibold text-foreground">Disease Tracking by Location</h2>
+                            <button id="addDiseaseMetric" class="healthcare-only px-4 py-2 text-sm bg-primary hover:bg-primary/90 text-white rounded-md transition-colors">
+                                <i data-lucide="plus" class="w-4 h-4 inline mr-1"></i>
+                                Add Finding
+                            </button>
+                        </div>
+                        
+                        <div class="overflow-x-auto">
+                            <table class="w-full">
+                                <thead>
+                                    <tr class="border-b border-border">
+                                        <th class="text-left py-3 px-4 text-sm font-medium text-muted">Location</th>
+                                        <th class="text-left py-3 px-4 text-sm font-medium text-muted">Disease/Symptom</th>
+                                        <th class="text-left py-3 px-4 text-sm font-medium text-muted">Cases</th>
+                                        <th class="text-left py-3 px-4 text-sm font-medium text-muted">Trend</th>
+                                        <th class="text-left py-3 px-4 text-sm font-medium text-muted">Severity</th>
+                                        <th class="text-left py-3 px-4 text-sm font-medium text-muted">Last Updated</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="diseaseTableBody">
+                                    <tr class="border-b border-border hover:bg-secondary/30">
+                                        <td class="py-3 px-4 text-sm text-foreground">Pasay City</td>
+                                        <td class="py-3 px-4 text-sm text-foreground">Dengue Fever</td>
+                                        <td class="py-3 px-4 text-sm text-foreground">147</td>
+                                        <td class="py-3 px-4">
+                                            <span class="text-sm text-red-500 flex items-center gap-1">
+                                                <i data-lucide="trending-up" class="w-3 h-3"></i>
+                                                +23%
+                                            </span>
+                                        </td>
+                                        <td class="py-3 px-4">
+                                            <span class="px-2 py-1 text-xs rounded-full bg-red-500/10 text-red-500 border border-red-500/20">High</span>
+                                        </td>
+                                        <td class="py-3 px-4 text-sm text-muted">2 hours ago</td>
+                                    </tr>
+                                    <tr class="border-b border-border hover:bg-secondary/30">
+                                        <td class="py-3 px-4 text-sm text-foreground">Makati City</td>
+                                        <td class="py-3 px-4 text-sm text-foreground">Influenza Type A</td>
+                                        <td class="py-3 px-4 text-sm text-foreground">89</td>
+                                        <td class="py-3 px-4">
+                                            <span class="text-sm text-green-500 flex items-center gap-1">
+                                                <i data-lucide="trending-down" class="w-3 h-3"></i>
+                                                -8%
+                                            </span>
+                                        </td>
+                                        <td class="py-3 px-4">
+                                            <span class="px-2 py-1 text-xs rounded-full bg-yellow-500/10 text-yellow-500 border border-yellow-500/20">Medium</span>
+                                        </td>
+                                        <td class="py-3 px-4 text-sm text-muted">4 hours ago</td>
+                                    </tr>
+                                    <tr class="border-b border-border hover:bg-secondary/30">
+                                        <td class="py-3 px-4 text-sm text-foreground">Manila City</td>
+                                        <td class="py-3 px-4 text-sm text-foreground">Tuberculosis</td>
+                                        <td class="py-3 px-4 text-sm text-foreground">234</td>
+                                        <td class="py-3 px-4">
+                                            <span class="text-sm text-yellow-500 flex items-center gap-1">
+                                                <i data-lucide="minus" class="w-3 h-3"></i>
+                                                0%
+                                            </span>
+                                        </td>
+                                        <td class="py-3 px-4">
+                                            <span class="px-2 py-1 text-xs rounded-full bg-red-500/10 text-red-500 border border-red-500/20">High</span>
+                                        </td>
+                                        <td class="py-3 px-4 text-sm text-muted">1 day ago</td>
+                                    </tr>
+                                    <tr class="border-b border-border hover:bg-secondary/30">
+                                        <td class="py-3 px-4 text-sm text-foreground">Quezon City</td>
+                                        <td class="py-3 px-4 text-sm text-foreground">Hypertension</td>
+                                        <td class="py-3 px-4 text-sm text-foreground">456</td>
+                                        <td class="py-3 px-4">
+                                            <span class="text-sm text-red-500 flex items-center gap-1">
+                                                <i data-lucide="trending-up" class="w-3 h-3"></i>
+                                                +15%
+                                            </span>
+                                        </td>
+                                        <td class="py-3 px-4">
+                                            <span class="px-2 py-1 text-xs rounded-full bg-yellow-500/10 text-yellow-500 border border-yellow-500/20">Medium</span>
+                                        </td>
+                                        <td class="py-3 px-4 text-sm text-muted">6 hours ago</td>
+                                    </tr>
+                                    <tr class="border-b border-border hover:bg-secondary/30">
+                                        <td class="py-3 px-4 text-sm text-foreground">Taguig City</td>
+                                        <td class="py-3 px-4 text-sm text-foreground">COVID-19</td>
+                                        <td class="py-3 px-4 text-sm text-foreground">12</td>
+                                        <td class="py-3 px-4">
+                                            <span class="text-sm text-green-500 flex items-center gap-1">
+                                                <i data-lucide="trending-down" class="w-3 h-3"></i>
+                                                -45%
+                                            </span>
+                                        </td>
+                                        <td class="py-3 px-4">
+                                            <span class="px-2 py-1 text-xs rounded-full bg-green-500/10 text-green-500 border border-green-500/20">Low</span>
+                                        </td>
+                                        <td class="py-3 px-4 text-sm text-muted">3 hours ago</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
                     <div class="bg-card border border-border rounded-lg p-6">
                         <h2 class="text-xl font-semibold text-foreground mb-6">Priority Alerts</h2>
                         <div class="space-y-4">
                             <div class="flex items-center justify-between p-4 bg-secondary/50 rounded-lg border-l-4 border-primary">
                                 <div>
                                     <h4 class="font-medium text-foreground mb-1">Medication Stock Low</h4>
-                                    <p class="text-sm text-muted">Insulin supplies running low - 3 days remaining</p>
+                                    <p class="text-sm text-muted">Insulin supplies running low - 6 days remaining</p>
                                 </div>
-                                <button class="px-4 py-2 text-sm bg-primary hover:bg-primary/90 text-white rounded-md transition-colors">
+                                <button class="healthcare-only px-4 py-2 text-sm bg-primary hover:bg-primary/90 text-white rounded-md transition-colors">
                                     Reorder
                                 </button>
                             </div>
@@ -258,7 +444,7 @@
                                     <h4 class="font-medium text-foreground mb-1">Equipment Maintenance Due</h4>
                                     <p class="text-sm text-muted">MRI Machine #2 scheduled for maintenance</p>
                                 </div>
-                                <button class="px-4 py-2 text-sm bg-secondary hover:bg-secondary/80 text-foreground rounded-md transition-colors">
+                                <button class="healthcare-only px-4 py-2 text-sm bg-secondary hover:bg-secondary/80 text-foreground rounded-md transition-colors">
                                     Schedule
                                 </button>
                             </div>
@@ -267,7 +453,7 @@
                                     <h4 class="font-medium text-foreground mb-1">Staff Training Reminder</h4>
                                     <p class="text-sm text-muted">5 staff members need CPR certification renewal</p>
                                 </div>
-                                <button class="px-4 py-2 text-sm bg-primary hover:bg-primary/90 text-white rounded-md transition-colors">
+                                <button class="healthcare-only px-4 py-2 text-sm bg-primary hover:bg-primary/90 text-white rounded-md transition-colors">
                                     Notify
                                 </button>
                             </div>
@@ -276,46 +462,82 @@
                 </div>
             </div>
 
-            <!-- Patients Tab -->
             <div id="patients" class="tab-content">
                 <div class="space-y-8">
-                    <div class="bg-card border border-border rounded-lg p-6">
+                    <div class="healthcare-only bg-card border border-border rounded-lg p-6">
                         <h2 class="text-xl font-semibold text-foreground mb-6">Add New Patient</h2>
-                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                            <div class="space-y-2">
-                                <label class="block text-sm font-medium text-foreground">Patient Name</label>
-                                <input type="text" placeholder="Enter full name" class="w-full bg-secondary border border-border text-foreground px-4 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-primary" />
+                        <form id="patientForm" class="space-y-6">
+                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                <div class="space-y-2">
+                                    <label class="block text-sm font-medium text-foreground">Patient Name</label>
+                                    <input type="text" id="patientName" placeholder="Enter full name" class="w-full bg-secondary border border-border text-foreground px-4 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-primary" required />
+                                </div>
+                                <div class="space-y-2">
+                                    <label class="block text-sm font-medium text-foreground">Date of Birth</label>
+                                    <input type="date" id="patientDOB" class="w-full bg-secondary border border-border text-foreground px-4 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-primary" required />
+                                </div>
+                                <div class="space-y-2">
+                                    <label class="block text-sm font-medium text-foreground">Medical ID</label>
+                                    <input type="text" id="patientID" placeholder="Auto-generated" class="w-full bg-secondary border border-border text-foreground px-4 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-primary" readonly />
+                                </div>
+                                <div class="space-y-2">
+                                    <label class="block text-sm font-medium text-foreground">Location/Address</label>
+                                    <input type="text" id="patientLocation" placeholder="e.g., Pasay City, Metro Manila" class="w-full bg-secondary border border-border text-foreground px-4 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-primary" required />
+                                </div>
+                                <div class="space-y-2">
+                                    <label class="block text-sm font-medium text-foreground">Primary Condition/Disease</label>
+                                    <select id="patientCondition" class="w-full bg-secondary border border-border text-foreground px-4 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-primary" required>
+                                        <option value="">Select condition</option>
+                                        <option>Dengue Fever</option>
+                                        <option>Influenza Type A</option>
+                                        <option>Tuberculosis</option>
+                                        <option>Hypertension</option>
+                                        <option>COVID-19</option>
+                                        <option>Diabetes</option>
+                                        <option>Heart Disease</option>
+                                        <option>Respiratory Disease</option>
+                                        <option>Other</option>
+                                    </select>
+                                </div>
+                                <div class="space-y-2">
+                                    <label class="block text-sm font-medium text-foreground">Severity Level</label>
+                                    <select id="patientSeverity" class="w-full bg-secondary border border-border text-foreground px-4 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-primary" required>
+                                        <option value="">Select severity</option>
+                                        <option value="Low">Low - Mild symptoms</option>
+                                        <option value="Medium">Medium - Moderate symptoms</option>
+                                        <option value="High">High - Critical condition</option>
+                                    </select>
+                                </div>
+                                <div class="space-y-2">
+                                    <label class="block text-sm font-medium text-foreground">Emergency Contact</label>
+                                    <input type="tel" id="patientContact" placeholder="Phone number" class="w-full bg-secondary border border-border text-foreground px-4 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-primary" required />
+                                </div>
+                                <div class="space-y-2">
+                                    <label class="block text-sm font-medium text-foreground">Insurance Provider</label>
+                                    <input type="text" id="patientInsurance" placeholder="Insurance company" class="w-full bg-secondary border border-border text-foreground px-4 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-primary" />
+                                </div>
+                                <div class="space-y-2">
+                                    <label class="block text-sm font-medium text-foreground">Admission Date</label>
+                                    <input type="date" id="patientAdmission" class="w-full bg-secondary border border-border text-foreground px-4 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-primary" required />
+                                </div>
                             </div>
+                            
                             <div class="space-y-2">
-                                <label class="block text-sm font-medium text-foreground">Date of Birth</label>
-                                <input type="date" class="w-full bg-secondary border border-border text-foreground px-4 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-primary" />
+                                <label class="block text-sm font-medium text-foreground">Symptoms/Notes</label>
+                                <textarea id="patientNotes" rows="3" placeholder="Describe symptoms and any additional information..." class="w-full bg-secondary border border-border text-foreground px-4 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"></textarea>
                             </div>
-                            <div class="space-y-2">
-                                <label class="block text-sm font-medium text-foreground">Medical ID</label>
-                                <input type="text" placeholder="Auto-generated" class="w-full bg-secondary border border-border text-foreground px-4 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-primary" />
+
+                            <div class="flex items-center gap-3">
+                                <input type="checkbox" id="updateDiseaseTracking" class="w-4 h-4 rounded border-border text-primary focus:ring-primary" checked />
+                                <label for="updateDiseaseTracking" class="text-sm text-foreground">
+                                    Automatically update Disease Tracking data for this location and condition
+                                </label>
                             </div>
-                            <div class="space-y-2">
-                                <label class="block text-sm font-medium text-foreground">Primary Condition</label>
-                                <select class="w-full bg-secondary border border-border text-foreground px-4 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-primary">
-                                    <option>Select condition</option>
-                                    <option>Diabetes</option>
-                                    <option>Hypertension</option>
-                                    <option>Heart Disease</option>
-                                    <option>Respiratory</option>
-                                </select>
-                            </div>
-                            <div class="space-y-2">
-                                <label class="block text-sm font-medium text-foreground">Emergency Contact</label>
-                                <input type="tel" placeholder="Phone number" class="w-full bg-secondary border border-border text-foreground px-4 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-primary" />
-                            </div>
-                            <div class="space-y-2">
-                                <label class="block text-sm font-medium text-foreground">Insurance Provider</label>
-                                <input type="text" placeholder="Insurance company" class="w-full bg-secondary border border-border text-foreground px-4 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-primary" />
-                            </div>
-                        </div>
-                        <button class="mt-6 px-6 py-2 bg-primary hover:bg-primary/90 text-white rounded-md transition-colors">
-                            Add Patient
-                        </button>
+                            
+                            <button type="submit" class="px-6 py-2 bg-primary hover:bg-primary/90 text-white rounded-md transition-colors">
+                                Add Patient
+                            </button>
+                        </form>
                     </div>
 
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -333,71 +555,297 @@
                             <p class="text-sm text-muted mt-2">Records need review</p>
                         </div>
                     </div>
+
+                    <div class="bg-card border border-border rounded-lg p-6">
+                        <h2 class="text-xl font-semibold text-foreground mb-6">Recent Patient Admissions</h2>
+                        <div class="overflow-x-auto">
+                            <table class="w-full">
+                                <thead>
+                                    <tr class="border-b border-border">
+                                        <th class="text-left py-3 px-4 text-sm font-medium text-muted">Patient ID</th>
+                                        <th class="text-left py-3 px-4 text-sm font-medium text-muted">Name</th>
+                                        <th class="text-left py-3 px-4 text-sm font-medium text-muted">Location</th>
+                                        <th class="text-left py-3 px-4 text-sm font-medium text-muted">Condition</th>
+                                        <th class="text-left py-3 px-4 text-sm font-medium text-muted">Severity</th>
+                                        <th class="text-left py-3 px-4 text-sm font-medium text-muted">Admission Date</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="patientTableBody">
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            <!-- Resources Tab -->
             <div id="resources" class="tab-content">
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    <div class="bg-card border border-border rounded-lg p-6">
-                        <div class="flex items-center justify-between mb-4">
-                            <h3 class="text-lg font-semibold text-foreground">Medical Supplies</h3>
-                            <span class="px-2 py-1 text-xs rounded-full bg-green-500/10 text-green-500 border border-green-500/20">In Stock</span>
+                <div class="space-y-8">
+                     Resource Overview Metrics 
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+                        <div class="bg-card border border-border rounded-lg p-6">
+                            <h3 class="text-sm text-muted mb-4">Total Resources</h3>
+                            <div class="text-3xl font-bold text-foreground">87</div>
+                            <p class="text-sm text-muted mt-2">Items monitored</p>
                         </div>
-                        <p class="text-sm text-muted mb-4">Surgical Masks: 2,450 units</p>
-                        <div class="w-full h-2 bg-secondary rounded-full overflow-hidden mb-4">
-                            <div class="h-full bg-green-500 transition-all duration-300" style="width: 85%"></div>
+                        <div class="bg-card border border-border rounded-lg p-6">
+                            <h3 class="text-sm text-muted mb-4">Low Stock Items</h3>
+                            <div class="text-3xl font-bold text-foreground">12</div>
+                            <p class="text-sm text-red-500 flex items-center gap-1 mt-2">
+                                <i data-lucide="alert-circle" class="w-4 h-4"></i>
+                                Needs attention
+                            </p>
                         </div>
-                        <button class="w-full px-4 py-2 bg-secondary hover:bg-secondary/80 text-foreground rounded-md transition-colors">
-                            View Details
-                        </button>
+                        <div class="bg-card border border-border rounded-lg p-6">
+                            <h3 class="text-sm text-muted mb-4">Monthly Budget</h3>
+                            <div class="text-3xl font-bold text-foreground">₱5.2M</div>
+                            <p class="text-sm text-muted mt-2">₱2.8M remaining</p>
+                        </div>
+                        <div class="bg-card border border-border rounded-lg p-6">
+                            <h3 class="text-sm text-muted mb-4">Avg. Restock Time</h3>
+                            <div class="text-3xl font-bold text-foreground">4.2</div>
+                            <p class="text-sm text-muted mt-2">Days average</p>
+                        </div>
                     </div>
 
+                     Resource Inventory with Metrics 
                     <div class="bg-card border border-border rounded-lg p-6">
-                        <div class="flex items-center justify-between mb-4">
-                            <h3 class="text-lg font-semibold text-foreground">Medications</h3>
-                            <span class="px-2 py-1 text-xs rounded-full bg-yellow-500/10 text-yellow-500 border border-yellow-500/20">Low Stock</span>
+                        <div class="flex items-center justify-between mb-6">
+                            <h2 class="text-xl font-semibold text-foreground">Resource Inventory Monitoring</h2>
+                            <button id="addResourceBtn" class="healthcare-only px-4 py-2 text-sm bg-primary hover:bg-primary/90 text-white rounded-md transition-colors">
+                                <i data-lucide="plus" class="w-4 h-4 inline mr-1"></i>
+                                Add Resource
+                            </button>
                         </div>
-                        <p class="text-sm text-muted mb-4">Insulin: 45 vials remaining</p>
-                        <div class="w-full h-2 bg-secondary rounded-full overflow-hidden mb-4">
-                            <div class="h-full bg-yellow-500 transition-all duration-300" style="width: 25%"></div>
+                        
+                        <div class="overflow-x-auto">
+                            <table class="w-full">
+                                <thead>
+                                    <tr class="border-b border-border">
+                                        <th class="text-left py-3 px-4 text-sm font-medium text-muted">Resource Name</th>
+                                        <th class="text-left py-3 px-4 text-sm font-medium text-muted">Category</th>
+                                        <th class="text-left py-3 px-4 text-sm font-medium text-muted">Current Stock</th>
+                                        <th class="text-left py-3 px-4 text-sm font-medium text-muted">Min. Threshold</th>
+                                        <th class="text-left py-3 px-4 text-sm font-medium text-muted">Status</th>
+                                        <th class="text-left py-3 px-4 text-sm font-medium text-muted">Usage Rate</th>
+                                        <th class="text-left py-3 px-4 text-sm font-medium text-muted">Est. Depletion</th>
+                                        <th class="text-left py-3 px-4 text-sm font-medium text-muted">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="resourceTableBody">
+                                    <tr class="border-b border-border hover:bg-secondary/30">
+                                        <td class="py-3 px-4 text-sm text-foreground">Surgical Masks</td>
+                                        <td class="py-3 px-4 text-sm text-muted">PPE</td>
+                                        <td class="py-3 px-4 text-sm text-foreground font-medium">2,450</td>
+                                        <td class="py-3 px-4 text-sm text-muted">500</td>
+                                        <td class="py-3 px-4">
+                                            <div class="flex flex-col gap-1">
+                                                <span class="px-2 py-1 text-xs rounded-full bg-green-500/10 text-green-500 border border-green-500/20 w-fit">In Stock</span>
+                                                <div class="w-32 h-1.5 bg-secondary rounded-full overflow-hidden">
+                                                    <div class="h-full bg-green-500" style="width: 85%"></div>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td class="py-3 px-4 text-sm text-foreground">~120/day</td>
+                                        <td class="py-3 px-4 text-sm text-muted">20 days</td>
+                                        <td class="py-3 px-4">
+                                            <button class="text-sm text-primary hover:text-primary/80">View</button>
+                                        </td>
+                                    </tr>
+                                    <tr class="border-b border-border hover:bg-secondary/30">
+                                        <td class="py-3 px-4 text-sm text-foreground">Insulin (Vials)</td>
+                                        <td class="py-3 px-4 text-sm text-muted">Medication</td>
+                                        <td class="py-3 px-4 text-sm text-foreground font-medium">45</td>
+                                        <td class="py-3 px-4 text-sm text-muted">100</td>
+                                        <td class="py-3 px-4">
+                                            <div class="flex flex-col gap-1">
+                                                <span class="px-2 py-1 text-xs rounded-full bg-red-500/10 text-red-500 border border-red-500/20 w-fit">Critical</span>
+                                                <div class="w-32 h-1.5 bg-secondary rounded-full overflow-hidden">
+                                                    <div class="h-full bg-red-500" style="width: 25%"></div>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td class="py-3 px-4 text-sm text-foreground">~8/day</td>
+                                        <td class="py-3 px-4 text-sm text-red-500">6 days</td>
+                                        <td class="py-3 px-4">
+                                            <button class="healthcare-only text-sm text-primary hover:text-primary/80 font-medium">Reorder</button>
+                                        </td>
+                                    </tr>
+                                    <tr class="border-b border-border hover:bg-secondary/30">
+                                        <td class="py-3 px-4 text-sm text-foreground">Ventilators</td>
+                                        <td class="py-3 px-4 text-sm text-muted">Equipment</td>
+                                        <td class="py-3 px-4 text-sm text-foreground font-medium">8 / 10</td>
+                                        <td class="py-3 px-4 text-sm text-muted">7</td>
+                                        <td class="py-3 px-4">
+                                            <div class="flex flex-col gap-1">
+                                                <span class="px-2 py-1 text-xs rounded-full bg-green-500/10 text-green-500 border border-green-500/20 w-fit">Available</span>
+                                                <div class="w-32 h-1.5 bg-secondary rounded-full overflow-hidden">
+                                                    <div class="h-full bg-green-500" style="width: 80%"></div>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td class="py-3 px-4 text-sm text-foreground">2 in use</td>
+                                        <td class="py-3 px-4 text-sm text-muted">N/A</td>
+                                        <td class="py-3 px-4">
+                                            <button class="text-sm text-primary hover:text-primary/80">View</button>
+                                        </td>
+                                    </tr>
+                                    <tr class="border-b border-border hover:bg-secondary/30">
+                                        <td class="py-3 px-4 text-sm text-foreground">N95 Masks</td>
+                                        <td class="py-3 px-4 text-sm text-muted">PPE</td>
+                                        <td class="py-3 px-4 text-sm text-foreground font-medium">180</td>
+                                        <td class="py-3 px-4 text-sm text-muted">300</td>
+                                        <td class="py-3 px-4">
+                                            <div class="flex flex-col gap-1">
+                                                <span class="px-2 py-1 text-xs rounded-full bg-yellow-500/10 text-yellow-500 border border-yellow-500/20 w-fit">Low Stock</span>
+                                                <div class="w-32 h-1.5 bg-secondary rounded-full overflow-hidden">
+                                                    <div class="h-full bg-yellow-500" style="width: 45%"></div>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td class="py-3 px-4 text-sm text-foreground">~25/day</td>
+                                        <td class="py-3 px-4 text-sm text-yellow-500">7 days</td>
+                                        <td class="py-3 px-4">
+                                            <button class="healthcare-only text-sm text-primary hover:text-primary/80 font-medium">Reorder</button>
+                                        </td>
+                                    </tr>
+                                    <tr class="border-b border-border hover:bg-secondary/30">
+                                        <td class="py-3 px-4 text-sm text-foreground">Antibiotics (Amoxicillin)</td>
+                                        <td class="py-3 px-4 text-sm text-muted">Medication</td>
+                                        <td class="py-3 px-4 text-sm text-foreground font-medium">1,250</td>
+                                        <td class="py-3 px-4 text-sm text-muted">800</td>
+                                        <td class="py-3 px-4">
+                                            <div class="flex flex-col gap-1">
+                                                <span class="px-2 py-1 text-xs rounded-full bg-green-500/10 text-green-500 border border-green-500/20 w-fit">In Stock</span>
+                                                <div class="w-32 h-1.5 bg-secondary rounded-full overflow-hidden">
+                                                    <div class="h-full bg-green-500" style="width: 65%"></div>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td class="py-3 px-4 text-sm text-foreground">~35/day</td>
+                                        <td class="py-3 px-4 text-sm text-muted">36 days</td>
+                                        <td class="py-3 px-4">
+                                            <button class="text-sm text-primary hover:text-primary/80">View</button>
+                                        </td>
+                                    </tr>
+                                    <tr class="border-b border-border hover:bg-secondary/30">
+                                        <td class="py-3 px-4 text-sm text-foreground">Oxygen Tanks</td>
+                                        <td class="py-3 px-4 text-sm text-muted">Medical Gas</td>
+                                        <td class="py-3 px-4 text-sm text-foreground font-medium">28</td>
+                                        <td class="py-3 px-4 text-sm text-muted">30</td>
+                                        <td class="py-3 px-4">
+                                            <div class="flex flex-col gap-1">
+                                                <span class="px-2 py-1 text-xs rounded-full bg-yellow-500/10 text-yellow-500 border border-yellow-500/20 w-fit">Monitor</span>
+                                                <div class="w-32 h-1.5 bg-secondary rounded-full overflow-hidden">
+                                                    <div class="h-full bg-yellow-500" style="width: 55%"></div>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td class="py-3 px-4 text-sm text-foreground">~2/day</td>
+                                        <td class="py-3 px-4 text-sm text-muted">14 days</td>
+                                        <td class="py-3 px-4">
+                                            <button class="text-sm text-primary hover:text-primary/80">View</button>
+                                        </td>
+                                    </tr>
+                                    <tr class="border-b border-border hover:bg-secondary/30">
+                                        <td class="py-3 px-4 text-sm text-foreground">Syringes (10ml)</td>
+                                        <td class="py-3 px-4 text-sm text-muted">Medical Supplies</td>
+                                        <td class="py-3 px-4 text-sm text-foreground font-medium">3,800</td>
+                                        <td class="py-3 px-4 text-sm text-muted">1,000</td>
+                                        <td class="py-3 px-4">
+                                            <div class="flex flex-col gap-1">
+                                                <span class="px-2 py-1 text-xs rounded-full bg-green-500/10 text-green-500 border border-green-500/20 w-fit">In Stock</span>
+                                                <div class="w-32 h-1.5 bg-secondary rounded-full overflow-hidden">
+                                                    <div class="h-full bg-green-500" style="width: 90%"></div>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td class="py-3 px-4 text-sm text-foreground">~85/day</td>
+                                        <td class="py-3 px-4 text-sm text-muted">45 days</td>
+                                        <td class="py-3 px-4">
+                                            <button class="text-sm text-primary hover:text-primary/80">View</button>
+                                        </td>
+                                    </tr>
+                                    <tr class="border-b border-border hover:bg-secondary/30">
+                                        <td class="py-3 px-4 text-sm text-foreground">IV Fluids (Saline)</td>
+                                        <td class="py-3 px-4 text-sm text-muted">Medical Supplies</td>
+                                        <td class="py-3 px-4 text-sm text-foreground font-medium">67</td>
+                                        <td class="py-3 px-4 text-sm text-muted">150</td>
+                                        <td class="py-3 px-4">
+                                            <div class="flex flex-col gap-1">
+                                                <span class="px-2 py-1 text-xs rounded-full bg-red-500/10 text-red-500 border border-red-500/20 w-fit">Critical</span>
+                                                <div class="w-32 h-1.5 bg-secondary rounded-full overflow-hidden">
+                                                    <div class="h-full bg-red-500" style="width: 30%"></div>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td class="py-3 px-4 text-sm text-foreground">~18/day</td>
+                                        <td class="py-3 px-4 text-sm text-red-500">4 days</td>
+                                        <td class="py-3 px-4">
+                                            <button class="healthcare-only text-sm text-primary hover:text-primary/80 font-medium">Reorder</button>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
                         </div>
-                        <button class="w-full px-4 py-2 bg-secondary hover:bg-secondary/80 text-foreground rounded-md transition-colors">
-                            Reorder
-                        </button>
                     </div>
 
-                    <div class="bg-card border border-border rounded-lg p-6">
-                        <div class="flex items-center justify-between mb-4">
-                            <h3 class="text-lg font-semibold text-foreground">Equipment</h3>
-                            <span class="px-2 py-1 text-xs rounded-full bg-green-500/10 text-green-500 border border-green-500/20">Operational</span>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="bg-card border border-border rounded-lg p-6">
+                            <h3 class="text-lg font-semibold text-foreground mb-4">Top 5 Most Used Resources</h3>
+                            <div class="space-y-3">
+                                <div class="flex items-center justify-between">
+                                    <span class="text-sm text-foreground">Surgical Masks</span>
+                                    <span class="text-sm text-muted">120 units/day</span>
+                                </div>
+                                <div class="flex items-center justify-between">
+                                    <span class="text-sm text-foreground">Syringes</span>
+                                    <span class="text-sm text-muted">85 units/day</span>
+                                </div>
+                                <div class="flex items-center justify-between">
+                                    <span class="text-sm text-foreground">Antibiotics</span>
+                                    <span class="text-sm text-muted">35 units/day</span>
+                                </div>
+                                <div class="flex items-center justify-between">
+                                    <span class="text-sm text-foreground">N95 Masks</span>
+                                    <span class="text-sm text-muted">25 units/day</span>
+                                </div>
+                                <div class="flex items-center justify-between">
+                                    <span class="text-sm text-foreground">IV Fluids</span>
+                                    <span class="text-sm text-muted">18 units/day</span>
+                                </div>
+                            </div>
                         </div>
-                        <p class="text-sm text-muted mb-4">Ventilators: 8/10 available</p>
-                        <div class="w-full h-2 bg-secondary rounded-full overflow-hidden mb-4">
-                            <div class="h-full bg-green-500 transition-all duration-300" style="width: 80%"></div>
-                        </div>
-                        <button class="w-full px-4 py-2 bg-secondary hover:bg-secondary/80 text-foreground rounded-md transition-colors">
-                            View Details
-                        </button>
-                    </div>
 
-                    <div class="bg-card border border-border rounded-lg p-6">
-                        <div class="flex items-center justify-between mb-4">
-                            <h3 class="text-lg font-semibold text-foreground">PPE Supplies</h3>
-                            <span class="px-2 py-1 text-xs rounded-full bg-yellow-500/10 text-yellow-500 border border-yellow-500/20">Monitor</span>
+                        <div class="bg-card border border-border rounded-lg p-6">
+                            <h3 class="text-lg font-semibold text-foreground mb-4">Resource Alerts</h3>
+                            <div class="space-y-3">
+                                <div class="p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
+                                    <div class="flex items-center gap-2 mb-1">
+                                        <i data-lucide="alert-triangle" class="w-4 h-4 text-red-500"></i>
+                                        <span class="text-sm font-medium text-red-500">Critical Level</span>
+                                    </div>
+                                    <p class="text-xs text-muted">Insulin & IV Fluids need immediate reorder</p>
+                                </div>
+                                <div class="p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
+                                    <div class="flex items-center gap-2 mb-1">
+                                        <i data-lucide="alert-circle" class="w-4 h-4 text-yellow-500"></i>
+                                        <span class="text-sm font-medium text-yellow-500">Low Stock Warning</span>
+                                    </div>
+                                    <p class="text-xs text-muted">N95 Masks & Oxygen Tanks below threshold</p>
+                                </div>
+                                <div class="p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">
+                                    <div class="flex items-center gap-2 mb-1">
+                                        <i data-lucide="info" class="w-4 h-4 text-blue-500"></i>
+                                        <span class="text-sm font-medium text-blue-500">Pending Orders</span>
+                                    </div>
+                                    <p class="text-xs text-muted">5 purchase orders awaiting delivery</p>
+                                </div>
+                            </div>
                         </div>
-                        <p class="text-sm text-muted mb-4">N95 Masks: 180 units</p>
-                        <div class="w-full h-2 bg-secondary rounded-full overflow-hidden mb-4">
-                            <div class="h-full bg-yellow-500 transition-all duration-300" style="width: 45%"></div>
-                        </div>
-                        <button class="w-full px-4 py-2 bg-secondary hover:bg-secondary/80 text-foreground rounded-md transition-colors">
-                            Reorder
-                        </button>
                     </div>
                 </div>
             </div>
 
-            <!-- Training Tab -->
             <div id="training" class="tab-content">
                 <div class="space-y-8">
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -456,7 +904,7 @@
                 </div>
             </div>
 
-            <!-- Advocacy Tab -->
+             Advocacy Tab 
             <div id="advocacy" class="tab-content">
                 <div class="space-y-8">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -512,11 +960,180 @@
         </main>
     </div>
 
+    <div id="diseaseModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm hidden items-center justify-center z-50">
+        <div class="bg-card border border-border rounded-lg p-8 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div class="flex items-center justify-between mb-6">
+                <h2 class="text-2xl font-semibold text-foreground">Add Disease/Symptom Finding</h2>
+                <button id="closeDiseaseModal" class="text-muted hover:text-foreground">
+                    <i data-lucide="x" class="w-6 h-6"></i>
+                </button>
+            </div>
+            
+            <form id="diseaseForm" class="space-y-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="space-y-2">
+                        <label class="block text-sm font-medium text-foreground">Location/Area</label>
+                        <input type="text" id="diseaseLocation" placeholder="e.g., Pasay City" class="w-full bg-secondary border border-border text-foreground px-4 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-primary" required />
+                    </div>
+                    
+                    <div class="space-y-2">
+                        <label class="block text-sm font-medium text-foreground">Disease/Symptom Name</label>
+                        <input type="text" id="diseaseName" placeholder="e.g., Dengue Fever" class="w-full bg-secondary border border-border text-foreground px-4 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-primary" required />
+                    </div>
+                    
+                    <div class="space-y-2">
+                        <label class="block text-sm font-medium text-foreground">Number of Cases</label>
+                        <input type="number" id="diseaseCases" placeholder="e.g., 147" class="w-full bg-secondary border border-border text-foreground px-4 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-primary" required />
+                    </div>
+                    
+                    <div class="space-y-2">
+                        <label class="block text-sm font-medium text-foreground">Trend (%)</label>
+                        <input type="number" id="diseaseTrend" placeholder="e.g., +23 or -15" class="w-full bg-secondary border border-border text-foreground px-4 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-primary" required />
+                    </div>
+                    
+                    <div class="space-y-2">
+                        <label class="block text-sm font-medium text-foreground">Severity Level</label>
+                        <select id="diseaseSeverity" class="w-full bg-secondary border border-border text-foreground px-4 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-primary" required>
+                            <option value="">Select severity</option>
+                            <option value="Low">Low</option>
+                            <option value="Medium">Medium</option>
+                            <option value="High">High</option>
+                        </select>
+                    </div>
+                    
+                    <div class="space-y-2">
+                        <label class="block text-sm font-medium text-foreground">Date Recorded</label>
+                        <input type="datetime-local" id="diseaseDate" class="w-full bg-secondary border border-border text-foreground px-4 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-primary" required />
+                    </div>
+                </div>
+                
+                <div class="space-y-2">
+                    <label class="block text-sm font-medium text-foreground">Additional Notes</label>
+                    <textarea id="diseaseNotes" rows="3" placeholder="Any additional information about the outbreak or symptoms..." class="w-full bg-secondary border border-border text-foreground px-4 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"></textarea>
+                </div>
+                
+                <div class="flex gap-4 justify-end">
+                    <button type="button" id="cancelDiseaseBtn" class="px-6 py-2 bg-secondary hover:bg-secondary/80 text-foreground rounded-md transition-colors">
+                        Cancel
+                    </button>
+                    <button type="submit" class="px-6 py-2 bg-primary hover:bg-primary/90 text-white rounded-md transition-colors">
+                        Add Finding
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="resourceModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm hidden items-center justify-center z-50">
+        <div class="bg-card border border-border rounded-lg p-8 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div class="flex items-center justify-between mb-6">
+                <h2 class="text-2xl font-semibold text-foreground">Add Resource to Inventory</h2>
+                <button id="closeResourceModal" class="text-muted hover:text-foreground">
+                    <i data-lucide="x" class="w-6 h-6"></i>
+                </button>
+            </div>
+            
+            <form id="resourceForm" class="space-y-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="space-y-2">
+                        <label class="block text-sm font-medium text-foreground">Resource Name</label>
+                        <input type="text" id="resourceName" placeholder="e.g., Surgical Masks" class="w-full bg-secondary border border-border text-foreground px-4 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-primary" required />
+                    </div>
+                    
+                    <div class="space-y-2">
+                        <label class="block text-sm font-medium text-foreground">Category</label>
+                        <select id="resourceCategory" class="w-full bg-secondary border border-border text-foreground px-4 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-primary" required>
+                            <option value="">Select category</option>
+                            <option value="PPE">PPE</option>
+                            <option value="Medication">Medication</option>
+                            <option value="Equipment">Equipment</option>
+                            <option value="Medical Supplies">Medical Supplies</option>
+                            <option value="Medical Gas">Medical Gas</option>
+                        </select>
+                    </div>
+                    
+                    <div class="space-y-2">
+                        <label class="block text-sm font-medium text-foreground">Current Stock</label>
+                        <input type="number" id="resourceStock" placeholder="e.g., 2450" class="w-full bg-secondary border border-border text-foreground px-4 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-primary" required />
+                    </div>
+                    
+                    <div class="space-y-2">
+                        <label class="block text-sm font-medium text-foreground">Minimum Threshold</label>
+                        <input type="number" id="resourceThreshold" placeholder="e.g., 500" class="w-full bg-secondary border border-border text-foreground px-4 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-primary" required />
+                    </div>
+                    
+                    <div class="space-y-2">
+                        <label class="block text-sm font-medium text-foreground">Daily Usage Rate</label>
+                        <input type="number" id="resourceUsage" placeholder="e.g., 120" class="w-full bg-secondary border border-border text-foreground px-4 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-primary" required />
+                    </div>
+                    
+                    <div class="space-y-2">
+                        <label class="block text-sm font-medium text-foreground">Unit of Measurement</label>
+                        <input type="text" id="resourceUnit" placeholder="e.g., units, vials, boxes" class="w-full bg-secondary border border-border text-foreground px-4 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-primary" required />
+                    </div>
+                </div>
+                
+                <div class="space-y-2">
+                    <label class="block text-sm font-medium text-foreground">Notes</label>
+                    <textarea id="resourceNotes" rows="3" placeholder="Any additional information about this resource..." class="w-full bg-secondary border border-border text-foreground px-4 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"></textarea>
+                </div>
+                
+                <div class="flex gap-4 justify-end">
+                    <button type="button" id="cancelResourceBtn" class="px-6 py-2 bg-secondary hover:bg-secondary/80 text-foreground rounded-md transition-colors">
+                        Cancel
+                    </button>
+                    <button type="submit" class="px-6 py-2 bg-primary hover:bg-primary/90 text-white rounded-md transition-colors">
+                        Add Resource
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <script>
+        // Data storage in memory
+        let diseaseData = [];
+        let resourceData = [];
+        let patientData = [];
+        let patientIdCounter = 1000;
+
+        // Disease tracking aggregation by location
+        let diseaseTrackingMap = new Map();
+
+        // User role management
+        let userRole = null; // 'healthcare' or 'viewer'
+
         // Check if already logged in on page load
-        if (localStorage.getItem('isAuthenticated') === 'true') {
+        const isAuth = document.cookie.split('; ').find(row => row.startsWith('auth='));
+        const savedRole = document.cookie.split('; ').find(row => row.startsWith('role='));
+        
+        if (isAuth && isAuth.split('=')[1] === 'true' && savedRole) {
+            userRole = savedRole.split('=')[1];
             showDashboard();
         }
+
+        // Role selection handlers
+        document.getElementById('yesHealthcareBtn').addEventListener('click', function() {
+            // Healthcare worker - show login
+            document.getElementById('roleSelectionView').classList.remove('active');
+            document.getElementById('loginView').classList.add('active');
+            lucide.createIcons();
+        });
+
+        document.getElementById('noHealthcareBtn').addEventListener('click', function() {
+            // Non-healthcare user - go directly to dashboard in read-only mode
+            userRole = 'viewer';
+            document.cookie = 'role=viewer; path=/';
+            document.cookie = 'auth=true; path=/';
+            showDashboard();
+        });
+
+        // Back to role selection
+        document.getElementById('backToRoleBtn').addEventListener('click', function() {
+            document.getElementById('loginView').classList.remove('active');
+            document.getElementById('roleSelectionView').classList.add('active');
+            lucide.createIcons();
+        });
 
         // Handle login form submission
         document.getElementById('loginForm').addEventListener('submit', function(e) {
@@ -527,8 +1144,9 @@
             const errorMessage = document.getElementById('errorMessage');
             
             if (email && password) {
-                // Simple authentication - in production, use real authentication
-                localStorage.setItem('isAuthenticated', 'true');
+                userRole = 'healthcare';
+                document.cookie = 'auth=true; path=/';
+                document.cookie = 'role=healthcare; path=/';
                 showDashboard();
             } else {
                 errorMessage.textContent = 'Please enter both email and password';
@@ -538,26 +1156,103 @@
 
         // Handle logout
         document.getElementById('logoutBtn').addEventListener('click', function() {
-            localStorage.removeItem('isAuthenticated');
-            showLogin();
+            document.cookie = 'auth=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+            document.cookie = 'role=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+            userRole = null;
+            showRoleSelection();
         });
+
+        // Function to show role selection view
+        function showRoleSelection() {
+            document.getElementById('dashboardView').classList.remove('active');
+            document.getElementById('loginView').classList.remove('active');
+            document.getElementById('roleSelectionView').classList.add('active');
+            document.getElementById('email').value = '';
+            document.getElementById('password').value = '';
+            document.getElementById('errorMessage').classList.add('hidden');
+            lucide.createIcons();
+        }
 
         // Function to show dashboard view
         function showDashboard() {
             document.getElementById('loginView').classList.remove('active');
+            document.getElementById('roleSelectionView').classList.remove('active');
             document.getElementById('dashboardView').classList.add('active');
-            // Initialize Lucide icons after dashboard is shown
+            
+            // Apply role-based access control
+            applyRoleBasedAccess();
+            
             lucide.createIcons();
         }
 
-        // Function to show login view
-        function showLogin() {
-            document.getElementById('dashboardView').classList.remove('active');
-            document.getElementById('loginView').classList.add('active');
-            // Clear form
-            document.getElementById('email').value = '';
-            document.getElementById('password').value = '';
-            document.getElementById('errorMessage').classList.add('hidden');
+        // Function to apply role-based access control
+        function applyRoleBasedAccess() {
+            const readOnlyNotice = document.getElementById('readOnlyNotice');
+            const userRoleBadge = document.getElementById('userRoleBadge');
+            const logoutBtnText = document.getElementById('logoutBtnText');
+            
+            if (userRole === 'viewer') {
+                // Show read-only notice
+                readOnlyNotice.classList.remove('hidden');
+                
+                // Update role badge
+                userRoleBadge.textContent = 'Viewer Mode';
+                userRoleBadge.className = 'px-3 py-1 text-sm rounded-full bg-blue-500/10 text-blue-500 border border-blue-500/20';
+                
+                // Change logout button text
+                logoutBtnText.textContent = 'Exit';
+                
+                // Disable all healthcare-only elements
+                const healthcareOnlyElements = document.querySelectorAll('.healthcare-only');
+                healthcareOnlyElements.forEach(element => {
+                    if (element.tagName === 'BUTTON') {
+                        element.disabled = true;
+                        element.classList.add('opacity-50', 'cursor-not-allowed');
+                        element.classList.remove('hover:bg-primary/90', 'hover:bg-secondary/80');
+                    } else if (element.tagName === 'DIV') {
+                        element.style.display = 'none';
+                    }
+                });
+                
+                // Disable all form inputs
+                const formInputs = document.querySelectorAll('input, textarea, select, form button[type="submit"]');
+                formInputs.forEach(input => {
+                    input.disabled = true;
+                    if (input.tagName === 'BUTTON') {
+                        input.classList.add('opacity-50', 'cursor-not-allowed');
+                    }
+                });
+            } else if (userRole === 'healthcare') {
+                // Hide read-only notice
+                readOnlyNotice.classList.add('hidden');
+                
+                // Update role badge
+                userRoleBadge.textContent = 'Healthcare Worker';
+                userRoleBadge.className = 'px-3 py-1 text-sm rounded-full bg-primary/10 text-primary border border-primary/20';
+                
+                // Change logout button text
+                logoutBtnText.textContent = 'Log Out';
+                
+                // Enable all healthcare-only elements
+                const healthcareOnlyElements = document.querySelectorAll('.healthcare-only');
+                healthcareOnlyElements.forEach(element => {
+                    if (element.tagName === 'BUTTON') {
+                        element.disabled = false;
+                        element.classList.remove('opacity-50', 'cursor-not-allowed');
+                    } else if (element.tagName === 'DIV') {
+                        element.style.display = 'block';
+                    }
+                });
+                
+                // Enable all form inputs
+                const formInputs = document.querySelectorAll('input:not([readonly]), textarea, select, form button[type="submit"]');
+                formInputs.forEach(input => {
+                    input.disabled = false;
+                    if (input.tagName === 'BUTTON') {
+                        input.classList.remove('opacity-50', 'cursor-not-allowed');
+                    }
+                });
+            }
         }
 
         // Handle tab switching in dashboard
@@ -568,15 +1263,595 @@
             button.addEventListener('click', function() {
                 const tabName = this.getAttribute('data-tab');
                 
-                // Remove active class from all tabs and buttons
                 tabButtons.forEach(btn => btn.classList.remove('tab-active'));
                 tabContents.forEach(content => content.classList.remove('active'));
                 
-                // Add active class to clicked button and corresponding content
                 this.classList.add('tab-active');
                 document.getElementById(tabName).classList.add('active');
+                
+                // Re-initialize charts when tab is shown if already loaded
+                if (tabName === 'dashboard' && typeof initializeCharts === 'function') {
+                    // Small delay to ensure canvas elements are rendered
+                    setTimeout(() => {
+                        initializeCharts();
+                    }, 100);
+                }
             });
         });
+
+        // Patient Form Handling
+        const patientForm = document.getElementById('patientForm');
+        
+        // Generate patient ID on page load
+        document.getElementById('patientID').value = `PT-${patientIdCounter}`;
+
+        patientForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            
+            // Only allow if healthcare worker
+            if (userRole !== 'healthcare') {
+                alert('Only healthcare workers can add patients.');
+                return;
+            }
+            
+            const patientId = document.getElementById('patientID').value;
+            const name = document.getElementById('patientName').value;
+            const dob = document.getElementById('patientDOB').value;
+            const location = document.getElementById('patientLocation').value;
+            const condition = document.getElementById('patientCondition').value;
+            const severity = document.getElementById('patientSeverity').value;
+            const contact = document.getElementById('patientContact').value;
+            const insurance = document.getElementById('patientInsurance').value;
+            const admission = document.getElementById('patientAdmission').value;
+            const updateTracking = document.getElementById('updateDiseaseTracking').checked;
+
+            // Add patient to table
+            const severityClass = severity === 'High' ? 'red' : severity === 'Medium' ? 'yellow' : 'green';
+            const newPatientRow = `
+                <tr class="border-b border-border hover:bg-secondary/30">
+                    <td class="py-3 px-4 text-sm text-foreground font-medium">${patientId}</td>
+                    <td class="py-3 px-4 text-sm text-foreground">${name}</td>
+                    <td class="py-3 px-4 text-sm text-muted">${location}</td>
+                    <td class="py-3 px-4 text-sm text-foreground">${condition}</td>
+                    <td class="py-3 px-4">
+                        <span class="px-2 py-1 text-xs rounded-full bg-${severityClass}-500/10 text-${severityClass}-500 border border-${severityClass}-500/20">${severity}</span>
+                    </td>
+                    <td class="py-3 px-4 text-sm text-muted">${new Date(admission).toLocaleDateString()}</td>
+                </tr>
+            `;
+            
+            document.getElementById('patientTableBody').insertAdjacentHTML('afterbegin', newPatientRow);
+
+            // Update disease tracking if checkbox is checked
+            if (updateTracking && condition !== 'Other') {
+                updateDiseaseTracking(location, condition, severity);
+            }
+
+            // Store patient data
+            patientData.push({
+                id: patientId,
+                name,
+                dob,
+                location,
+                condition,
+                severity,
+                contact,
+                insurance,
+                admission
+            });
+
+            // Reset form and generate new ID
+            patientForm.reset();
+            patientIdCounter++;
+            document.getElementById('patientID').value = `PT-${patientIdCounter}`;
+            
+            // Set admission date to today
+            document.getElementById('patientAdmission').value = new Date().toISOString().split('T')[0];
+            
+            lucide.createIcons();
+            
+            // Show success message
+            alert(`Patient ${name} added successfully! ${updateTracking ? 'Disease tracking updated.' : ''}`);
+        });
+
+        // Function to update disease tracking
+        function updateDiseaseTracking(location, condition, severity) {
+            const key = `${location}-${condition}`;
+            
+            if (diseaseTrackingMap.has(key)) {
+                const existing = diseaseTrackingMap.get(key);
+                existing.cases += 1;
+                // Update previousCases to reflect the number of cases before the current increment for trend calculation
+                existing.previousCases = existing.cases - 1; 
+                
+                // Calculate trend percentage
+                if (existing.previousCases > 0) {
+                    existing.trend = Math.round(((existing.cases - existing.previousCases) / existing.previousCases) * 100);
+                } else {
+                    existing.trend = 0; // Or handle as appropriate if there's no previous data
+                }
+                
+                existing.lastUpdated = new Date(); // Update last updated time
+                
+                // Update the existing row in the table
+                updateDiseaseRow(key, existing);
+            } else {
+                // Add new entry to disease tracking
+                const newEntry = {
+                    location,
+                    condition,
+                    cases: 1,
+                    previousCases: 0, // Set previousCases to 0 initially as this is the first case
+                    trend: 0,
+                    severity,
+                    lastUpdated: new Date()
+                };
+                
+                diseaseTrackingMap.set(key, newEntry);
+                addDiseaseRow(newEntry);
+            }
+        }
+
+        // Function to add new disease tracking row
+        function addDiseaseRow(entry) {
+            const timeAgo = getTimeAgo(entry.lastUpdated);
+            const trendIcon = entry.trend >= 0 ? 'trending-up' : 'trending-down';
+            const trendColor = entry.trend >= 0 ? 'red' : 'green';
+            const severityClass = entry.severity === 'High' ? 'red' : entry.severity === 'Medium' ? 'yellow' : 'green';
+            
+            const newRow = `
+                <tr class="border-b border-border hover:bg-secondary/30" data-key="${entry.location}-${entry.condition}">
+                    <td class="py-3 px-4 text-sm text-foreground">${entry.location}</td>
+                    <td class="py-3 px-4 text-sm text-foreground">${entry.condition}</td>
+                    <td class="py-3 px-4 text-sm text-foreground">${entry.cases}</td>
+                    <td class="py-3 px-4">
+                        <span class="text-sm text-${trendColor}-500 flex items-center gap-1">
+                            <i data-lucide="${trendIcon}" class="w-3 h-3"></i>
+                            ${entry.trend > 0 ? '+' : ''}${entry.trend}%
+                        </span>
+                    </td>
+                    <td class="py-3 px-4">
+                        <span class="px-2 py-1 text-xs rounded-full bg-${severityClass}-500/10 text-${severityClass}-500 border border-${severityClass}-500/20">${entry.severity}</span>
+                    </td>
+                    <td class="py-3 px-4 text-sm text-muted">${timeAgo}</td>
+                </tr>
+            `;
+            
+            document.getElementById('diseaseTableBody').insertAdjacentHTML('afterbegin', newRow);
+            lucide.createIcons();
+        }
+
+        // Function to update existing disease tracking row
+        function updateDiseaseRow(key, entry) {
+            const row = document.querySelector(`tr[data-key="${key}"]`);
+            if (row) {
+                const timeAgo = getTimeAgo(entry.lastUpdated);
+                const trendIcon = entry.trend >= 0 ? 'trending-up' : 'trending-down';
+                const trendColor = entry.trend >= 0 ? 'red' : 'green';
+                
+                row.cells[2].textContent = entry.cases;
+                row.cells[3].innerHTML = `
+                    <span class="text-sm text-${trendColor}-500 flex items-center gap-1">
+                        <i data-lucide="${trendIcon}" class="w-3 h-3"></i>
+                        ${entry.trend > 0 ? '+' : ''}${entry.trend}%
+                    </span>
+                `;
+                row.cells[5].textContent = timeAgo;
+                lucide.createIcons();
+            }
+        }
+
+        // Set default admission date to today
+        document.getElementById('patientAdmission').value = new Date().toISOString().split('T')[0];
+
+        // Disease Modal Functions
+        const diseaseModal = document.getElementById('diseaseModal');
+        const addDiseaseBtn = document.getElementById('addDiseaseMetric');
+        const closeDiseaseModal = document.getElementById('closeDiseaseModal');
+        const cancelDiseaseBtn = document.getElementById('cancelDiseaseBtn');
+        const diseaseForm = document.getElementById('diseaseForm');
+
+        addDiseaseBtn.addEventListener('click', () => {
+            if (userRole !== 'healthcare') {
+                alert('Only healthcare workers can add disease findings.');
+                return;
+            }
+            diseaseModal.classList.remove('hidden');
+            diseaseModal.classList.add('flex');
+            lucide.createIcons();
+        });
+
+        closeDiseaseModal.addEventListener('click', () => {
+            diseaseModal.classList.add('hidden');
+            diseaseModal.classList.remove('flex');
+            diseaseForm.reset(); // Reset form on close
+        });
+
+        cancelDiseaseBtn.addEventListener('click', () => {
+            diseaseModal.classList.add('hidden');
+            diseaseModal.classList.remove('flex');
+            diseaseForm.reset();
+        });
+
+        diseaseForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            
+            if (userRole !== 'healthcare') {
+                alert('Only healthcare workers can add disease findings.');
+                return;
+            }
+            
+            const location = document.getElementById('diseaseLocation').value;
+            const name = document.getElementById('diseaseName').value;
+            const cases = document.getElementById('diseaseCases').value;
+            const trend = document.getElementById('diseaseTrend').value;
+            const severity = document.getElementById('diseaseSeverity').value;
+            const date = document.getElementById('diseaseDate').value;
+            
+            const timeAgo = getTimeAgo(new Date(date));
+            const trendIcon = trend >= 0 ? 'trending-up' : 'trending-down';
+            const trendColor = trend >= 0 ? 'red' : 'green';
+            const severityClass = severity === 'High' ? 'red' : severity === 'Medium' ? 'yellow' : 'green';
+            
+            const newRow = `
+                <tr class="border-b border-border hover:bg-secondary/30">
+                    <td class="py-3 px-4 text-sm text-foreground">${location}</td>
+                    <td class="py-3 px-4 text-sm text-foreground">${name}</td>
+                    <td class="py-3 px-4 text-sm text-foreground">${cases}</td>
+                    <td class="py-3 px-4">
+                        <span class="text-sm text-${trendColor}-500 flex items-center gap-1">
+                            <i data-lucide="${trendIcon}" class="w-3 h-3"></i>
+                            ${trend > 0 ? '+' : ''}${trend}%
+                        </span>
+                    </td>
+                    <td class="py-3 px-4">
+                        <span class="px-2 py-1 text-xs rounded-full bg-${severityClass}-500/10 text-${severityClass}-500 border border-${severityClass}-500/20">${severity}</span>
+                    </td>
+                    <td class="py-3 px-4 text-sm text-muted">${timeAgo}</td>
+                </tr>
+            `;
+            
+            document.getElementById('diseaseTableBody').insertAdjacentHTML('beforeend', newRow);
+            diseaseModal.classList.add('hidden');
+            diseaseModal.classList.remove('flex');
+            diseaseForm.reset();
+            lucide.createIcons();
+        });
+
+        // Resource Modal Functions
+        const resourceModal = document.getElementById('resourceModal');
+        const addResourceBtn = document.getElementById('addResourceBtn');
+        const closeResourceModal = document.getElementById('closeResourceModal');
+        const cancelResourceBtn = document.getElementById('cancelResourceBtn');
+        const resourceForm = document.getElementById('resourceForm');
+
+        addResourceBtn.addEventListener('click', () => {
+            if (userRole !== 'healthcare') {
+                alert('Only healthcare workers can add resources.');
+                return;
+            }
+            resourceModal.classList.remove('hidden');
+            resourceModal.classList.add('flex');
+            lucide.createIcons();
+        });
+
+        closeResourceModal.addEventListener('click', () => {
+            resourceModal.classList.add('hidden');
+            resourceModal.classList.remove('flex');
+            resourceForm.reset(); // Reset form on close
+        });
+
+        cancelResourceBtn.addEventListener('click', () => {
+            resourceModal.classList.add('hidden');
+            resourceModal.classList.remove('flex');
+            resourceForm.reset();
+        });
+
+        resourceForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            
+            if (userRole !== 'healthcare') {
+                alert('Only healthcare workers can add resources.');
+                return;
+            }
+            
+            const name = document.getElementById('resourceName').value;
+            const category = document.getElementById('resourceCategory').value;
+            const stock = parseInt(document.getElementById('resourceStock').value);
+            const threshold = parseInt(document.getElementById('resourceThreshold').value);
+            const usage = parseInt(document.getElementById('resourceUsage').value);
+            
+            // Calculate percentage for the progress bar, ensuring it's relative to a meaningful value (e.g., double the threshold)
+            // If threshold is 0 or stock is 0, handle appropriately to avoid division by zero or incorrect percentages.
+            let percentage = 0;
+            if (threshold > 0) {
+                // Use a baseline like twice the threshold or a reasonable upper bound for percentage calculation
+                const baseline = Math.max(threshold * 2, 100); // Use max to ensure a baseline even if threshold is low
+                percentage = Math.round((stock / baseline) * 100);
+            } else if (stock > 0) {
+                percentage = 100; // If threshold is 0, any stock means "in stock"
+            }
+            percentage = Math.min(percentage, 100); // Cap percentage at 100%
+            
+            const daysLeft = usage > 0 ? Math.floor(stock / usage) : Infinity; // If usage is 0, it lasts forever
+            
+            let status, statusColor, barColor;
+            if (percentage >= 70) {
+                status = 'In Stock';
+                statusColor = 'green';
+                barColor = 'green';
+            } else if (percentage >= 40) {
+                status = 'Low Stock';
+                statusColor = 'yellow';
+                barColor = 'yellow';
+            } else {
+                status = 'Critical';
+                statusColor = 'red';
+                barColor = 'red';
+            }
+            
+            // Adjust estimated depletion display
+            let depletionDisplay;
+            if (daysLeft === Infinity) {
+                depletionDisplay = 'N/A';
+            } else if (daysLeft <= 1) {
+                depletionDisplay = '<1 day';
+            } else if (daysLeft <= 7) {
+                depletionDisplay = `${daysLeft} days`;
+            } else if (daysLeft <= 30) {
+                depletionDisplay = `${Math.round(daysLeft / 30)} month${Math.round(daysLeft / 30) > 1 ? 's' : ''}`;
+            } else {
+                depletionDisplay = `${Math.round(daysLeft / 365)} year${Math.round(daysLeft / 365) > 1 ? 's' : ''}`;
+            }
+
+            // Adjust severity color for depletion display
+            let depletionColor = 'muted';
+            if (daysLeft <= 7) depletionColor = 'red';
+            else if (daysLeft <= 14) depletionColor = 'yellow';
+
+
+            const newRow = `
+                <tr class="border-b border-border hover:bg-secondary/30">
+                    <td class="py-3 px-4 text-sm text-foreground">${name}</td>
+                    <td class="py-3 px-4 text-sm text-muted">${category}</td>
+                    <td class="py-3 px-4 text-sm text-foreground font-medium">${stock.toLocaleString()}</td>
+                    <td class="py-3 px-4 text-sm text-muted">${threshold}</td>
+                    <td class="py-3 px-4">
+                        <div class="flex flex-col gap-1">
+                            <span class="px-2 py-1 text-xs rounded-full bg-${statusColor}-500/10 text-${statusColor}-500 border border-${statusColor}-500/20 w-fit">${status}</span>
+                            <div class="w-32 h-1.5 bg-secondary rounded-full overflow-hidden">
+                                <div class="h-full bg-${barColor}-500" style="width: ${percentage}%"></div>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="py-3 px-4 text-sm text-foreground">~${usage}/day</td>
+                    <td class="py-3 px-4 text-sm text-${depletionColor}">${depletionDisplay}</td>
+                    <td class="py-3 px-4">
+                        <button class="healthcare-only text-sm text-primary hover:text-primary/80 ${percentage < 40 ? 'font-medium' : ''}">${percentage < 40 ? 'Reorder' : 'View'}</button>
+                    </td>
+                </tr>
+            `;
+            
+            document.getElementById('resourceTableBody').insertAdjacentHTML('beforeend', newRow);
+            resourceModal.classList.add('hidden');
+            resourceModal.classList.remove('flex');
+            resourceForm.reset();
+            
+            // Reapply role-based access to new elements
+            applyRoleBasedAccess();
+            lucide.createIcons();
+        });
+
+        // Helper function to calculate time ago
+        function getTimeAgo(date) {
+            const now = new Date();
+            const pastDate = new Date(date); // Ensure date is a Date object
+            const diff = Math.abs(now - pastDate);
+            const hours = Math.floor(diff / (1000 * 60 * 60));
+            const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+            
+            if (hours < 1) return 'Just now';
+            if (hours < 24) return `${hours} hour${hours > 1 ? 's' : ''} ago`;
+            if (days === 1) return '1 day ago';
+            return `${days} days ago`;
+        }
+
+        // Set default date/time for disease form
+        if (document.getElementById('diseaseDate')) {
+            const now = new Date();
+            now.setMinutes(now.getMinutes() - now.getTimezoneOffset()); // Adjust for timezone to get local time
+            document.getElementById('diseaseDate').value = now.toISOString().slice(0, 16);
+        }
+
+        let patientsChart, criticalChart, recoveryChart, resourceChart;
+
+        function initializeCharts() {
+            // Total Patients Line Chart
+            const patientsCtx = document.getElementById('patientsChart');
+            if (patientsCtx) {
+                patientsChart = new Chart(patientsCtx, {
+                    type: 'line',
+                    data: {
+                        labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+                        datasets: [{
+                            label: 'Patients',
+                            data: [2540, 2620, 2710, 2750, 2800, 2820, 2847],
+                            borderColor: '#3b82f6',
+                            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                            tension: 0.4,
+                            fill: true,
+                            pointRadius: 4,
+                            pointHoverRadius: 6
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: false
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: false,
+                                grid: {
+                                    color: 'rgba(255, 255, 255, 0.05)'
+                                },
+                                ticks: {
+                                    color: '#666666'
+                                }
+                            },
+                            x: {
+                                grid: {
+                                    display: false
+                                },
+                                ticks: {
+                                    color: '#666666'
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+
+            // Critical Cases Bar Chart
+            const criticalCtx = document.getElementById('criticalChart');
+            if (criticalCtx) {
+                criticalChart = new Chart(criticalCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+                        datasets: [{
+                            label: 'Critical Cases',
+                            data: [18, 19, 17, 20, 21, 22, 23],
+                            backgroundColor: [
+                                'rgba(239, 68, 68, 0.8)',
+                                'rgba(239, 68, 68, 0.8)',
+                                'rgba(239, 68, 68, 0.8)',
+                                'rgba(239, 68, 68, 0.8)',
+                                'rgba(239, 68, 68, 0.8)',
+                                'rgba(239, 68, 68, 0.8)',
+                                'rgba(229, 9, 20, 1)'
+                            ],
+                            borderRadius: 6
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: false
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                grid: {
+                                    color: 'rgba(255, 255, 255, 0.05)'
+                                },
+                                ticks: {
+                                    color: '#666666'
+                                }
+                            },
+                            x: {
+                                grid: {
+                                    display: false
+                                },
+                                ticks: {
+                                    color: '#666666'
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+
+            // Recovery Rate Doughnut Chart
+            const recoveryCtx = document.getElementById('recoveryChart');
+            if (recoveryCtx) {
+                recoveryChart = new Chart(recoveryCtx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Recovered', 'In Treatment'],
+                        datasets: [{
+                            data: [94.2, 5.8],
+                            backgroundColor: [
+                                'rgba(34, 197, 94, 0.8)',
+                                'rgba(51, 51, 51, 0.3)'
+                            ],
+                            borderWidth: 0
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        cutout: '75%',
+                        plugins: {
+                            legend: {
+                                display: false
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        return context.label + ': ' + context.parsed + '%';
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+
+            // Resource Utilization Pie Chart
+            const resourceCtx = document.getElementById('resourceChart');
+            if (resourceCtx) {
+                resourceChart = new Chart(resourceCtx, {
+                    type: 'pie',
+                    data: {
+                        labels: ['Used', 'Available'],
+                        datasets: [{
+                            data: [78, 22],
+                            backgroundColor: [
+                                'rgba(168, 85, 247, 0.8)',
+                                'rgba(51, 51, 51, 0.3)'
+                            ],
+                            borderWidth: 0
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: false
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        return context.label + ': ' + context.parsed + '%';
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+        }
+
+        // Call initializeCharts when dashboard is shown
+        const originalShowDashboard = showDashboard;
+        showDashboard = function() {
+            originalShowDashboard();
+            // Small delay to ensure canvas elements are rendered
+            setTimeout(() => {
+                initializeCharts();
+            }, 100);
+        };
+        
+        // Initialize lucide icons on page load
+        lucide.createIcons();
     </script>
 </body>
 </html>
