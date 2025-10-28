@@ -7,6 +7,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="script.js"></script>
     <script>
         tailwind.config = {
             theme: {
@@ -1091,769 +1092,268 @@
     </div>
 
     <script>
-        // Data storage in memory
-        let diseaseData = [];
-        let resourceData = [];
-        let patientData = [];
-        let patientIdCounter = 1000;
+        // Wait for the HTML to be fully loaded before running any scripts
+document.addEventListener('DOMContentLoaded', () => {
 
-        // Disease tracking aggregation by location
-        let diseaseTrackingMap = new Map();
+    // --- 1. Get All Elements ---
+    
+    // Get all three main "views"
+    const roleSelectionView = document.getElementById('roleSelectionView');
+    const loginView = document.getElementById('loginView');
+    const dashboardView = document.getElementById('dashboardView');
+    const views = [roleSelectionView, loginView, dashboardView];
 
-        // User role management
-        let userRole = null; // 'healthcare' or 'viewer'
+    // Get all navigation buttons
+    const yesHealthcareBtn = document.getElementById('yesHealthcareBtn');
+    const noHealthcareBtn = document.getElementById('noHealthcareBtn');
+    const backToRoleBtn = document.getElementById('backToRoleBtn');
+    const logoutBtn = document.getElementById('logoutBtn');
+    
+    // Get the login form and its error message
+    const loginForm = document.getElementById('loginForm');
+    const errorMessage = document.getElementById('errorMessage');
 
-        // Check if already logged in on page load
-        const isAuth = document.cookie.split('; ').find(row => row.startsWith('auth='));
-        const savedRole = document.cookie.split('; ').find(row => row.startsWith('role='));
-        
-        if (isAuth && isAuth.split('=')[1] === 'true' && savedRole) {
-            userRole = savedRole.split('=')[1];
-            showDashboard();
-        }
+    // Get dashboard elements that change
+    const userRoleBadge = document.getElementById('userRoleBadge');
+    const logoutBtnText = document.getElementById('logoutBtnText');
+    const readOnlyNotice = document.getElementById('readOnlyNotice');
+    
+    // Get dashboard tabs
+    const tabButtons = document.querySelectorAll('.tab-btn');
+    const tabContents = document.querySelectorAll('.tab-content');
 
-        // Role selection handlers
-        document.getElementById('yesHealthcareBtn').addEventListener('click', function() {
-            // Healthcare worker - show login
-            document.getElementById('roleSelectionView').classList.remove('active');
-            document.getElementById('loginView').classList.add('active');
-            lucide.createIcons();
-        });
 
-        document.getElementById('noHealthcareBtn').addEventListener('click', function() {
-            // Non-healthcare user - go directly to dashboard in read-only mode
-            userRole = 'viewer';
-            document.cookie = 'role=viewer; path=/';
-            document.cookie = 'auth=true; path=/';
-            showDashboard();
-        });
-
-        // Back to role selection
-        document.getElementById('backToRoleBtn').addEventListener('click', function() {
-            document.getElementById('loginView').classList.remove('active');
-            document.getElementById('roleSelectionView').classList.add('active');
-            lucide.createIcons();
-        });
-
-        // Handle login form submission
-        document.getElementById('loginForm').addEventListener('submit', function(e) {
-            e.preventDefault();
-            
-            const email = document.getElementById('email').value;
-            const password = document.getElementById('password').value;
-            const errorMessage = document.getElementById('errorMessage');
-            
-            if (email && password) {
-                userRole = 'healthcare';
-                document.cookie = 'auth=true; path=/';
-                document.cookie = 'role=healthcare; path=/';
-                showDashboard();
+    // --- 2. Helper Function to Switch Views ---
+    
+    // A single, clean function to show one view and hide all others
+    function showView(viewId) {
+        views.forEach(view => {
+            if (view.id === viewId) {
+                view.classList.add('active');
             } else {
-                errorMessage.textContent = 'Please enter both email and password';
-                errorMessage.classList.remove('hidden');
+                view.classList.remove('active');
             }
         });
+    }
 
-        // Handle logout
-        document.getElementById('logoutBtn').addEventListener('click', function() {
-            document.cookie = 'auth=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
-            document.cookie = 'role=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
-            userRole = null;
-            showRoleSelection();
+    
+    // --- 3. Set Up All Event Listeners (One Time) ---
+
+    // Role Selection: "Yes, I am"
+    yesHealthcareBtn.addEventListener('click', () => {
+        showView('loginView');
+        // Clear any old error messages
+        errorMessage.classList.add('hidden');
+        errorMessage.textContent = '';
+    });
+
+    // Role Selection: "No, just viewing"
+    noHealthcareBtn.addEventListener('click', () => {
+        // Set up the dashboard for "Viewer" mode
+        userRoleBadge.textContent = 'Viewer';
+        userRoleBadge.className = 'px-3 py-1 text-sm rounded-full bg-blue-500/10 text-blue-500 border border-blue-500/20'; // Blue badge
+        logoutBtnText.textContent = 'Go Back';
+        readOnlyNotice.classList.remove('hidden');
+
+        // Hide all "healthcare-only" buttons
+        document.querySelectorAll('.healthcare-only').forEach(el => {
+            el.style.display = 'none';
         });
 
-        // Function to show role selection view
-        function showRoleSelection() {
-            document.getElementById('dashboardView').classList.remove('active');
-            document.getElementById('loginView').classList.remove('active');
-            document.getElementById('roleSelectionView').classList.add('active');
-            document.getElementById('email').value = '';
-            document.getElementById('password').value = '';
-            document.getElementById('errorMessage').classList.add('hidden');
-            document.getElementById('email').disabled = false;
-            document.getElementById('password').disabled = false;
-            lucide.createIcons();
-        }
-
-        // Function to show dashboard view
-        function showDashboard() {
-            document.getElementById('loginView').classList.remove('active');
-            document.getElementById('roleSelectionView').classList.remove('active');
-            document.getElementById('dashboardView').classList.add('active');
-            
-            // Apply role-based access control
-            applyRoleBasedAccess();
-            
-            lucide.createIcons();
-        }
-
-        // Function to apply role-based access control
-        function applyRoleBasedAccess() {
-            const readOnlyNotice = document.getElementById('readOnlyNotice');
-            const userRoleBadge = document.getElementById('userRoleBadge');
-            const logoutBtnText = document.getElementById('logoutBtnText');
-            
-            if (userRole === 'viewer') {
-                // Show read-only notice
-                readOnlyNotice.classList.remove('hidden');
-                
-                // Update role badge
-                userRoleBadge.textContent = 'Viewer Mode';
-                userRoleBadge.className = 'px-3 py-1 text-sm rounded-full bg-blue-500/10 text-blue-500 border border-blue-500/20';
-                
-                // Change logout button text
-                logoutBtnText.textContent = 'Exit';
-                
-                // Disable all healthcare-only elements
-                const healthcareOnlyElements = document.querySelectorAll('.healthcare-only');
-                healthcareOnlyElements.forEach(element => {
-                    if (element.tagName === 'BUTTON') {
-                        element.disabled = true;
-                        element.classList.add('opacity-50', 'cursor-not-allowed');
-                        element.classList.remove('hover:bg-primary/90', 'hover:bg-secondary/80');
-                    } else if (element.tagName === 'DIV') {
-                        element.style.display = 'none';
-                    }
-                });
-                
-                // Disable all form inputs
-                const formInputs = document.querySelectorAll('input, textarea, select, form button[type="submit"]');
-                formInputs.forEach(input => {
-                    input.disabled = true;
-                    if (input.tagName === 'BUTTON') {
-                        input.classList.add('opacity-50', 'cursor-not-allowed');
-                    }
-                });
-            } else if (userRole === 'healthcare') {
-                // Hide read-only notice
-                readOnlyNotice.classList.add('hidden');
-                
-                // Update role badge
-                userRoleBadge.textContent = 'Healthcare Worker';
-                userRoleBadge.className = 'px-3 py-1 text-sm rounded-full bg-primary/10 text-primary border border-primary/20';
-                
-                // Change logout button text
-                logoutBtnText.textContent = 'Log Out';
-                
-                // Enable all healthcare-only elements
-                const healthcareOnlyElements = document.querySelectorAll('.healthcare-only');
-                healthcareOnlyElements.forEach(element => {
-                    if (element.tagName === 'BUTTON') {
-                        element.disabled = false;
-                        element.classList.remove('opacity-50', 'cursor-not-allowed');
-                    } else if (element.tagName === 'DIV') {
-                        element.style.display = 'block';
-                    }
-                });
-                
-                // Enable all form inputs
-                const formInputs = document.querySelectorAll('input:not([readonly]), textarea, select, form button[type="submit"]');
-                formInputs.forEach(input => {
-                    input.disabled = false;
-                    if (input.tagName === 'BUTTON') {
-                        input.classList.remove('opacity-50', 'cursor-not-allowed');
-                    }
-                });
-            }
-        }
-
-        // Handle tab switching in dashboard
-        const tabButtons = document.querySelectorAll('.tab-btn');
-        const tabContents = document.querySelectorAll('.tab-content');
-
-        tabButtons.forEach(button => {
-            button.addEventListener('click', function() {
-                const tabName = this.getAttribute('data-tab');
-                
-                tabButtons.forEach(btn => btn.classList.remove('tab-active'));
-                tabContents.forEach(content => content.classList.remove('active'));
-                
-                this.classList.add('tab-active');
-                document.getElementById(tabName).classList.add('active');
-                
-                // Re-initialize charts when tab is shown if already loaded
-                if (tabName === 'dashboard' && typeof initializeCharts === 'function') {
-                    // Small delay to ensure canvas elements are rendered
-                    setTimeout(() => {
-                        initializeCharts();
-                    }, 100);
-                }
-            });
-        });
-
-        // Patient Form Handling
-        const patientForm = document.getElementById('patientForm');
-        
-        // Generate patient ID on page load
-        document.getElementById('patientID').value = `PT-${patientIdCounter}`;
-
-        patientForm.addEventListener('submit', (e) => {
-            e.preventDefault();
-            
-            // Only allow if healthcare worker
-            if (userRole !== 'healthcare') {
-                alert('Only healthcare workers can add patients.');
-                return;
-            }
-            
-            const patientId = document.getElementById('patientID').value;
-            const name = document.getElementById('patientName').value;
-            const dob = document.getElementById('patientDOB').value;
-            const location = document.getElementById('patientLocation').value;
-            const condition = document.getElementById('patientCondition').value;
-            const severity = document.getElementById('patientSeverity').value;
-            const contact = document.getElementById('patientContact').value;
-            const insurance = document.getElementById('patientInsurance').value;
-            const admission = document.getElementById('patientAdmission').value;
-            const updateTracking = document.getElementById('updateDiseaseTracking').checked;
-
-            // Add patient to table
-            const severityClass = severity === 'High' ? 'red' : severity === 'Medium' ? 'yellow' : 'green';
-            const newPatientRow = `
-                <tr class="border-b border-border hover:bg-secondary/30">
-                    <td class="py-3 px-4 text-sm text-foreground font-medium">${patientId}</td>
-                    <td class="py-3 px-4 text-sm text-foreground">${name}</td>
-                    <td class="py-3 px-4 text-sm text-muted">${location}</td>
-                    <td class="py-3 px-4 text-sm text-foreground">${condition}</td>
-                    <td class="py-3 px-4">
-                        <span class="px-2 py-1 text-xs rounded-full bg-${severityClass}-500/10 text-${severityClass}-500 border border-${severityClass}-500/20">${severity}</span>
-                    </td>
-                    <td class="py-3 px-4 text-sm text-muted">${new Date(admission).toLocaleDateString()}</td>
-                </tr>
-            `;
-            
-            document.getElementById('patientTableBody').insertAdjacentHTML('afterbegin', newPatientRow);
-
-            // Update disease tracking if checkbox is checked
-            if (updateTracking && condition !== 'Other') {
-                updateDiseaseTracking(location, condition, severity);
-            }
-
-            // Store patient data
-            patientData.push({
-                id: patientId,
-                name,
-                dob,
-                location,
-                condition,
-                severity,
-                contact,
-                insurance,
-                admission
-            });
-
-            // Reset form and generate new ID
-            patientForm.reset();
-            patientIdCounter++;
-            document.getElementById('patientID').value = `PT-${patientIdCounter}`;
-            
-            // Set admission date to today
-            document.getElementById('patientAdmission').value = new Date().toISOString().split('T')[0];
-            
-            lucide.createIcons();
-            
-            // Show success message
-            alert(`Patient ${name} added successfully! ${updateTracking ? 'Disease tracking updated.' : ''}`);
-        });
-
-        // Function to update disease tracking
-        function updateDiseaseTracking(location, condition, severity) {
-            const key = `${location}-${condition}`;
-            
-            if (diseaseTrackingMap.has(key)) {
-                const existing = diseaseTrackingMap.get(key);
-                existing.cases += 1;
-                // Update previousCases to reflect the number of cases before the current increment for trend calculation
-                existing.previousCases = existing.cases - 1; 
-                
-                // Calculate trend percentage
-                if (existing.previousCases > 0) {
-                    existing.trend = Math.round(((existing.cases - existing.previousCases) / existing.previousCases) * 100);
-                } else {
-                    existing.trend = 0; // Or handle as appropriate if there's no previous data
-                }
-                
-                existing.lastUpdated = new Date(); // Update last updated time
-                
-                // Update the existing row in the table
-                updateDiseaseRow(key, existing);
-            } else {
-                // Add new entry to disease tracking
-                const newEntry = {
-                    location,
-                    condition,
-                    cases: 1,
-                    previousCases: 0, // Set previousCases to 0 initially as this is the first case
-                    trend: 0,
-                    severity,
-                    lastUpdated: new Date()
-                };
-                
-                diseaseTrackingMap.set(key, newEntry);
-                addDiseaseRow(newEntry);
-            }
-        }
-
-        // Function to add new disease tracking row
-        function addDiseaseRow(entry) {
-            const timeAgo = getTimeAgo(entry.lastUpdated);
-            const trendIcon = entry.trend >= 0 ? 'trending-up' : 'trending-down';
-            const trendColor = entry.trend >= 0 ? 'red' : 'green';
-            const severityClass = entry.severity === 'High' ? 'red' : entry.severity === 'Medium' ? 'yellow' : 'green';
-            
-            const newRow = `
-                <tr class="border-b border-border hover:bg-secondary/30" data-key="${entry.location}-${entry.condition}">
-                    <td class="py-3 px-4 text-sm text-foreground">${entry.location}</td>
-                    <td class="py-3 px-4 text-sm text-foreground">${entry.condition}</td>
-                    <td class="py-3 px-4 text-sm text-foreground">${entry.cases}</td>
-                    <td class="py-3 px-4">
-                        <span class="text-sm text-${trendColor}-500 flex items-center gap-1">
-                            <i data-lucide="${trendIcon}" class="w-3 h-3"></i>
-                            ${entry.trend > 0 ? '+' : ''}${entry.trend}%
-                        </span>
-                    </td>
-                    <td class="py-3 px-4">
-                        <span class="px-2 py-1 text-xs rounded-full bg-${severityClass}-500/10 text-${severityClass}-500 border border-${severityClass}-500/20">${entry.severity}</span>
-                    </td>
-                    <td class="py-3 px-4 text-sm text-muted">${timeAgo}</td>
-                </tr>
-            `;
-            
-            document.getElementById('diseaseTableBody').insertAdjacentHTML('afterbegin', newRow);
-            lucide.createIcons();
-        }
-
-        // Function to update existing disease tracking row
-        function updateDiseaseRow(key, entry) {
-            const row = document.querySelector(`tr[data-key="${key}"]`);
-            if (row) {
-                const timeAgo = getTimeAgo(entry.lastUpdated);
-                const trendIcon = entry.trend >= 0 ? 'trending-up' : 'trending-down';
-                const trendColor = entry.trend >= 0 ? 'red' : 'green';
-                
-                row.cells[2].textContent = entry.cases;
-                row.cells[3].innerHTML = `
-                    <span class="text-sm text-${trendColor}-500 flex items-center gap-1">
-                        <i data-lucide="${trendIcon}" class="w-3 h-3"></i>
-                        ${entry.trend > 0 ? '+' : ''}${entry.trend}%
-                    </span>
-                `;
-                row.cells[5].textContent = timeAgo;
-                lucide.createIcons();
-            }
-        }
-
-        // Set default admission date to today
-        document.getElementById('patientAdmission').value = new Date().toISOString().split('T')[0];
-
-        // Disease Modal Functions
-        const diseaseModal = document.getElementById('diseaseModal');
-        const addDiseaseBtn = document.getElementById('addDiseaseMetric');
-        const closeDiseaseModal = document.getElementById('closeDiseaseModal');
-        const cancelDiseaseBtn = document.getElementById('cancelDiseaseBtn');
-        const diseaseForm = document.getElementById('diseaseForm');
-
-        addDiseaseBtn.addEventListener('click', () => {
-            if (userRole !== 'healthcare') {
-                alert('Only healthcare workers can add disease findings.');
-                return;
-            }
-            diseaseModal.classList.remove('hidden');
-            diseaseModal.classList.add('flex');
-            lucide.createIcons();
-        });
-
-        closeDiseaseModal.addEventListener('click', () => {
-            diseaseModal.classList.add('hidden');
-            diseaseModal.classList.remove('flex');
-            diseaseForm.reset(); // Reset form on close
-        });
-
-        cancelDiseaseBtn.addEventListener('click', () => {
-            diseaseModal.classList.add('hidden');
-            diseaseModal.classList.remove('flex');
-            diseaseForm.reset();
-        });
-
-        diseaseForm.addEventListener('submit', (e) => {
-            e.preventDefault();
-            
-            if (userRole !== 'healthcare') {
-                alert('Only healthcare workers can add disease findings.');
-                return;
-            }
-            
-            const location = document.getElementById('diseaseLocation').value;
-            const name = document.getElementById('diseaseName').value;
-            const cases = document.getElementById('diseaseCases').value;
-            const trend = document.getElementById('diseaseTrend').value;
-            const severity = document.getElementById('diseaseSeverity').value;
-            const date = document.getElementById('diseaseDate').value;
-            
-            const timeAgo = getTimeAgo(new Date(date));
-            const trendIcon = trend >= 0 ? 'trending-up' : 'trending-down';
-            const trendColor = trend >= 0 ? 'red' : 'green';
-            const severityClass = severity === 'High' ? 'red' : severity === 'Medium' ? 'yellow' : 'green';
-            
-            const newRow = `
-                <tr class="border-b border-border hover:bg-secondary/30">
-                    <td class="py-3 px-4 text-sm text-foreground">${location}</td>
-                    <td class="py-3 px-4 text-sm text-foreground">${name}</td>
-                    <td class="py-3 px-4 text-sm text-foreground">${cases}</td>
-                    <td class="py-3 px-4">
-                        <span class="text-sm text-${trendColor}-500 flex items-center gap-1">
-                            <i data-lucide="${trendIcon}" class="w-3 h-3"></i>
-                            ${trend > 0 ? '+' : ''}${trend}%
-                        </span>
-                    </td>
-                    <td class="py-3 px-4">
-                        <span class="px-2 py-1 text-xs rounded-full bg-${severityClass}-500/10 text-${severityClass}-500 border border-${severityClass}-500/20">${severity}</span>
-                    </td>
-                    <td class="py-3 px-4 text-sm text-muted">${timeAgo}</td>
-                </tr>
-            `;
-            
-            document.getElementById('diseaseTableBody').insertAdjacentHTML('beforeend', newRow);
-            diseaseModal.classList.add('hidden');
-            diseaseModal.classList.remove('flex');
-            diseaseForm.reset();
-            lucide.createIcons();
-        });
-
-        // Resource Modal Functions
-        const resourceModal = document.getElementById('resourceModal');
-        const addResourceBtn = document.getElementById('addResourceBtn');
-        const closeResourceModal = document.getElementById('closeResourceModal');
-        const cancelResourceBtn = document.getElementById('cancelResourceBtn');
-        const resourceForm = document.getElementById('resourceForm');
-
-        addResourceBtn.addEventListener('click', () => {
-            if (userRole !== 'healthcare') {
-                alert('Only healthcare workers can add resources.');
-                return;
-            }
-            resourceModal.classList.remove('hidden');
-            resourceModal.classList.add('flex');
-            lucide.createIcons();
-        });
-
-        closeResourceModal.addEventListener('click', () => {
-            resourceModal.classList.add('hidden');
-            resourceModal.classList.remove('flex');
-            resourceForm.reset(); // Reset form on close
-        });
-
-        cancelResourceBtn.addEventListener('click', () => {
-            resourceModal.classList.add('hidden');
-            resourceModal.classList.remove('flex');
-            resourceForm.reset();
-        });
-
-        resourceForm.addEventListener('submit', (e) => {
-            e.preventDefault();
-            
-            if (userRole !== 'healthcare') {
-                alert('Only healthcare workers can add resources.');
-                return;
-            }
-            
-            const name = document.getElementById('resourceName').value;
-            const category = document.getElementById('resourceCategory').value;
-            const stock = parseInt(document.getElementById('resourceStock').value);
-            const threshold = parseInt(document.getElementById('resourceThreshold').value);
-            const usage = parseInt(document.getElementById('resourceUsage').value);
-            
-            // Calculate percentage for the progress bar, ensuring it's relative to a meaningful value (e.g., double the threshold)
-            // If threshold is 0 or stock is 0, handle appropriately to avoid division by zero or incorrect percentages.
-            let percentage = 0;
-            if (threshold > 0) {
-                // Use a baseline like twice the threshold or a reasonable upper bound for percentage calculation
-                const baseline = Math.max(threshold * 2, 100); // Use max to ensure a baseline even if threshold is low
-                percentage = Math.round((stock / baseline) * 100);
-            } else if (stock > 0) {
-                percentage = 100; // If threshold is 0, any stock means "in stock"
-            }
-            percentage = Math.min(percentage, 100); // Cap percentage at 100%
-            
-            const daysLeft = usage > 0 ? Math.floor(stock / usage) : Infinity; // If usage is 0, it lasts forever
-            
-            let status, statusColor, barColor;
-            if (percentage >= 70) {
-                status = 'In Stock';
-                statusColor = 'green';
-                barColor = 'green';
-            } else if (percentage >= 40) {
-                status = 'Low Stock';
-                statusColor = 'yellow';
-                barColor = 'yellow';
-            } else {
-                status = 'Critical';
-                statusColor = 'red';
-                barColor = 'red';
-            }
-            
-            // Adjust estimated depletion display
-            let depletionDisplay;
-            if (daysLeft === Infinity) {
-                depletionDisplay = 'N/A';
-            } else if (daysLeft <= 1) {
-                depletionDisplay = '<1 day';
-            } else if (daysLeft <= 7) {
-                depletionDisplay = `${daysLeft} days`;
-            } else if (daysLeft <= 30) {
-                depletionDisplay = `${Math.round(daysLeft / 30)} month${Math.round(daysLeft / 30) > 1 ? 's' : ''}`;
-            } else {
-                depletionDisplay = `${Math.round(daysLeft / 365)} year${Math.round(daysLeft / 365) > 1 ? 's' : ''}`;
-            }
-
-            // Adjust severity color for depletion display
-            let depletionColor = 'muted';
-            if (daysLeft <= 7) depletionColor = 'red';
-            else if (daysLeft <= 14) depletionColor = 'yellow';
-
-
-            const newRow = `
-                <tr class="border-b border-border hover:bg-secondary/30">
-                    <td class="py-3 px-4 text-sm text-foreground">${name}</td>
-                    <td class="py-3 px-4 text-sm text-muted">${category}</td>
-                    <td class="py-3 px-4 text-sm text-foreground font-medium">${stock.toLocaleString()}</td>
-                    <td class="py-3 px-4 text-sm text-muted">${threshold}</td>
-                    <td class="py-3 px-4">
-                        <div class="flex flex-col gap-1">
-                            <span class="px-2 py-1 text-xs rounded-full bg-${statusColor}-500/10 text-${statusColor}-500 border border-${statusColor}-500/20 w-fit">${status}</span>
-                            <div class="w-32 h-1.5 bg-secondary rounded-full overflow-hidden">
-                                <div class="h-full bg-${barColor}-500" style="width: ${percentage}%"></div>
-                            </div>
-                        </div>
-                    </td>
-                    <td class="py-3 px-4 text-sm text-foreground">~${usage}/day</td>
-                    <td class="py-3 px-4 text-sm text-${depletionColor}">${depletionDisplay}</td>
-                    <td class="py-3 px-4">
-                        <button class="healthcare-only text-sm text-primary hover:text-primary/80 ${percentage < 40 ? 'font-medium' : ''}">${percentage < 40 ? 'Reorder' : 'View'}</button>
-                    </td>
-                </tr>
-            `;
-            
-            document.getElementById('resourceTableBody').insertAdjacentHTML('beforeend', newRow);
-            resourceModal.classList.add('hidden');
-            resourceModal.classList.remove('flex');
-            resourceForm.reset();
-            
-            // Reapply role-based access to new elements
-            applyRoleBasedAccess();
-            lucide.createIcons();
-        });
-
-        // Helper function to calculate time ago
-        function getTimeAgo(date) {
-            const now = new Date();
-            const pastDate = new Date(date); // Ensure date is a Date object
-            const diff = Math.abs(now - pastDate);
-            const hours = Math.floor(diff / (1000 * 60 * 60));
-            const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-            
-            if (hours < 1) return 'Just now';
-            if (hours < 24) return `${hours} hour${hours > 1 ? 's' : ''} ago`;
-            if (days === 1) return '1 day ago';
-            return `${days} days ago`;
-        }
-
-        // Set default date/time for disease form
-        if (document.getElementById('diseaseDate')) {
-            const now = new Date();
-            now.setMinutes(now.getMinutes() - now.getTimezoneOffset()); // Adjust for timezone to get local time
-            document.getElementById('diseaseDate').value = now.toISOString().slice(0, 16);
-        }
-
-        let patientsChart, criticalChart, recoveryChart, resourceChart;
-
-        function initializeCharts() {
-            // Total Patients Line Chart
-            const patientsCtx = document.getElementById('patientsChart');
-            if (patientsCtx) {
-                patientsChart = new Chart(patientsCtx, {
-                    type: 'line',
-                    data: {
-                        labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
-                        datasets: [{
-                            label: 'Patients',
-                            data: [2540, 2620, 2710, 2750, 2800, 2820, 2847],
-                            borderColor: '#3b82f6',
-                            backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                            tension: 0.4,
-                            fill: true,
-                            pointRadius: 4,
-                            pointHoverRadius: 6
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {
-                            legend: {
-                                display: false
-                            }
-                        },
-                        scales: {
-                            y: {
-                                beginAtZero: false,
-                                grid: {
-                                    color: 'rgba(255, 255, 255, 0.05)'
-                                },
-                                ticks: {
-                                    color: '#666666'
-                                }
-                            },
-                            x: {
-                                grid: {
-                                    display: false
-                                },
-                                ticks: {
-                                    color: '#666666'
-                                }
-                            }
-                        }
-                    }
-                });
-            }
-
-            // Critical Cases Bar Chart
-            const criticalCtx = document.getElementById('criticalChart');
-            if (criticalCtx) {
-                criticalChart = new Chart(criticalCtx, {
-                    type: 'bar',
-                    data: {
-                        labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
-                        datasets: [{
-                            label: 'Critical Cases',
-                            data: [18, 19, 17, 20, 21, 22, 23],
-                            backgroundColor: [
-                                'rgba(239, 68, 68, 0.8)',
-                                'rgba(239, 68, 68, 0.8)',
-                                'rgba(239, 68, 68, 0.8)',
-                                'rgba(239, 68, 68, 0.8)',
-                                'rgba(239, 68, 68, 0.8)',
-                                'rgba(239, 68, 68, 0.8)',
-                                'rgba(229, 9, 20, 1)'
-                            ],
-                            borderRadius: 6
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {
-                            legend: {
-                                display: false
-                            }
-                        },
-                        scales: {
-                            y: {
-                                beginAtZero: true,
-                                grid: {
-                                    color: 'rgba(255, 255, 255, 0.05)'
-                                },
-                                ticks: {
-                                    color: '#666666'
-                                }
-                            },
-                            x: {
-                                grid: {
-                                    display: false
-                                },
-                                ticks: {
-                                    color: '#666666'
-                                }
-                            }
-                        }
-                    }
-                });
-            }
-
-            // Recovery Rate Doughnut Chart
-            const recoveryCtx = document.getElementById('recoveryChart');
-            if (recoveryCtx) {
-                recoveryChart = new Chart(recoveryCtx, {
-                    type: 'doughnut',
-                    data: {
-                        labels: ['Recovered', 'In Treatment'],
-                        datasets: [{
-                            data: [94.2, 5.8],
-                            backgroundColor: [
-                                'rgba(34, 197, 94, 0.8)',
-                                'rgba(51, 51, 51, 0.3)'
-                            ],
-                            borderWidth: 0
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        cutout: '75%',
-                        plugins: {
-                            legend: {
-                                display: false
-                            },
-                            tooltip: {
-                                callbacks: {
-                                    label: function(context) {
-                                        return context.label + ': ' + context.parsed + '%';
-                                    }
-                                }
-                            }
-                        }
-                    }
-                });
-            }
-
-            // Resource Utilization Pie Chart
-            const resourceCtx = document.getElementById('resourceChart');
-            if (resourceCtx) {
-                resourceChart = new Chart(resourceCtx, {
-                    type: 'pie',
-                    data: {
-                        labels: ['Used', 'Available'],
-                        datasets: [{
-                            data: [78, 22],
-                            backgroundColor: [
-                                'rgba(168, 85, 247, 0.8)',
-                                'rgba(51, 51, 51, 0.3)'
-                            ],
-                            borderWidth: 0
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {
-                            legend: {
-                                display: false
-                            },
-                            tooltip: {
-                                callbacks: {
-                                    label: function(context) {
-                                        return context.label + ': ' + context.parsed + '%';
-                                    }
-                                }
-                            }
-                        }
-                    }
-                });
-            }
-        }
-
-        // Call initializeCharts when dashboard is shown
-        const originalShowDashboard = showDashboard;
-        showDashboard = function() {
-            originalShowDashboard();
-            // Small delay to ensure canvas elements are rendered
-            setTimeout(() => {
-                initializeCharts();
-            }, 100);
-        };
-        
-        // Initialize lucide icons on page load
+        showView('dashboardView');
+        // Make sure icons are loaded for the new view
         lucide.createIcons();
+    });
+
+    // Login Page: "Back" arrow button
+    backToRoleBtn.addEventListener('click', () => {
+        showView('roleSelectionView');
+    });
+
+    // Login Page: "Sign In" Form Submission
+    loginForm.addEventListener('submit', (e) => {
+        // ALWAYS prevent the form from actually submitting (which reloads the page)
+        e.preventDefault(); 
+        
+        console.log("Login form submitted!"); // Good for testing
+
+        // --- Your Login Logic Goes Here ---
+        // For this example, we'll just pretend the login is always successful
+        
+        // Example: Get values
+        const email = document.getElementById('email').value;
+        const password = document.getElementById('password').value;
+
+        // Example: Simple check (you would do a real check here)
+        if (email === '' || password === '') {
+            errorMessage.textContent = 'Please enter both email and password.';
+            errorMessage.classList.remove('hidden');
+            return; // Stop here
+        }
+
+        // --- If login is successful ---
+        
+        // Set up the dashboard for "Healthcare Worker" mode
+        userRoleBadge.textContent = 'Healthcare Worker';
+        userRoleBadge.className = 'px-3 py-1 text-sm rounded-full bg-green-500/10 text-green-500 border border-green-500/20'; // Green badge
+        logoutBtnText.textContent = 'Log Out';
+        readOnlyNotice.classList.add('hidden');
+
+        // Show all "healthcare-only" buttons
+        document.querySelectorAll('.healthcare-only').forEach(el => {
+            el.style.display = ''; // Reset to default
+        });
+
+        // Reset form fields
+        loginForm.reset();
+        
+        // Finally, show the dashboard
+        showView('dashboardView');
+        // Make sure icons are loaded for the new view
+        lucide.createIcons();
+    });
+
+    // Dashboard: "Log Out" / "Go Back" Button
+    logoutBtn.addEventListener('click', () => {
+        // This button works for both roles. It just sends the user
+        // back to the main role selection screen.
+        showView('roleSelectionView');
+        
+        // Optional: Clear login form just in case
+        loginForm.reset();
+        errorMessage.classList.add('hidden');
+    });
+
+    // Dashboard: Tab Switching Logic
+    tabButtons.forEach(button => {
+        button.addEventListener('click', () => {
+            // Get the target tab ID from the 'data-tab' attribute
+            const targetTab = button.getAttribute('data-tab');
+
+            // Deactivate all buttons and content
+            tabButtons.forEach(btn => btn.classList.remove('tab-active'));
+            tabContents.forEach(content => content.classList.remove('active'));
+
+            // Activate the clicked button
+            button.classList.add('tab-active');
+            
+            // Activate the corresponding content
+            document.getElementById(targetTab).classList.add('active');
+            
+            // Make sure icons are loaded for the new tab
+            lucide.createIcons();
+        });
+    });
+
+
+    // --- 4. Initialize Lucide Icons ---
+    lucide.createIcons();
+    
+    
+    // --- 5. Chart.js Setup ---
+    // (Using placeholder data)
+    
+    const chartConfig = {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+            y: { ticks: { display: false }, grid: { display: false }, border: { display: false } },
+            x: { ticks: { display: false }, grid: { display: false }, border: { display: false } }
+        },
+        tension: 0.4
+    };
+    
+    const chartConfigWithLegend = {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { 
+            legend: { 
+                position: 'bottom', 
+                labels: { color: '#666666', boxWidth: 12, padding: 20 } 
+            } 
+        }
+    };
+
+    // Patients Chart
+    new Chart(document.getElementById('patientsChart'), {
+        type: 'line',
+        data: {
+            labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+            datasets: [{
+                label: 'Patients',
+                data: [350, 380, 370, 400, 390, 410, 406],
+                borderColor: '#3b82f6', // blue-500
+                fill: false,
+            }]
+        },
+        options: chartConfig
+    });
+
+    // Critical Chart
+    new Chart(document.getElementById('criticalChart'), {
+        type: 'line',
+        data: {
+            labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+            datasets: [{
+                label: 'Critical',
+                data: [18, 19, 18, 20, 21, 20, 23],
+                borderColor: '#ef4444', // red-500
+                fill: false,
+            }]
+        },
+        options: chartConfig
+    });
+
+    // Recovery Chart
+    new Chart(document.getElementById('recoveryChart'), {
+        type: 'doughnut',
+        data: {
+            labels: ['Recovered', 'Active'],
+            datasets: [{
+                data: [94.2, 5.8],
+                backgroundColor: ['#22c55e', '#333333'], // green-500, border
+                borderWidth: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: '70%',
+            plugins: { 
+                legend: { 
+                    display: true, 
+                    position: 'bottom',
+                    labels: { color: '#666666' }
+                } 
+            }
+        }
+    });
+
+    // Resource Chart
+    new Chart(document.getElementById('resourceChart'), {
+        type: 'bar',
+        data: {
+            labels: ['Beds', 'Ventilators', 'Staff', 'Medication'],
+            datasets: [{
+                label: 'Utilization %',
+                data: [85, 60, 90, 78],
+                backgroundColor: ['#a855f7', '#a855f7', '#a855f7', '#a855f7'], // purple-500
+                borderRadius: 4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                y: { beginAtZero: true, max: 100, grid: { color: '#333333' }, ticks: { color: '#666666' } },
+                x: { grid: { display: false }, ticks: { color: '#666666' } }
+            }
+        }
+    });
+
+});
     </script>
 </body>
 </html>
