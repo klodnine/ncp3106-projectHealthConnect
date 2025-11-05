@@ -196,16 +196,18 @@
                     </div>
 
                     <form id="loginForm" class="space-y-5">
+                        <!-- Replace existing email input block with this -->
                         <div class="space-y-2">
-                            <label for="email" class="block text-sm font-medium text-foreground">
-                                Email or Username
-                            </label>
-                            <input
-                                id="email"
-                                type="text"
-                                class="w-full bg-secondary border border-border text-foreground placeholder:text-muted h-12 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-                                placeholder="Enter your email"
-                            />
+                        <label for="email" class="block text-sm font-medium text-foreground">Email</label>
+                        <input
+                            id="email"5
+                            name="email"
+                            type="email"
+                            class="w-full bg-secondary border border-border text-foreground placeholder:text-muted h-12 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                            placeholder="Enter your email"
+                            required
+                            autocomplete="email"
+                        />
                         </div>
 
                         <div class="space-y-2">
@@ -220,8 +222,8 @@
                             />
                         </div>
 
-                        <div id="errorMessage" class="hidden text-sm text-primary bg-primary/10 border border-primary/20 rounded px-3 py-2"></div>
-
+                        <div id="errorMessage" class="hidden text-sm text-red-700 bg-red-50 border border-red-200 rounded px-3 py-2" role="alert" aria-live="assertive"></div>
+                        
                         <button
                             type="submit"
                             class="w-full h-12 bg-primary hover:bg-primary/90 text-white font-semibold text-base rounded-md transition-colors"
@@ -337,9 +339,9 @@
                         <div class="bg-card border border-border rounded-lg p-6 hover:border-primary/50 transition-colors">
                             <div class="flex items-center justify-between mb-4">
                                 <div>
-                                    <h3 class="text-sm font-medium text-muted uppercase tracking-wide">Critical Cases</h3>
+                                    <h3 class="text-sm font-medium text-muted uppercase tracking-wide">Cases</h3>
                                     <div class="flex items-center gap-2 mt-2">
-                                        <div class="text-3xl font-bold text-foreground" id="criticalCasesCount">0</div>
+                                        <div class="text-3xl font-bold text-foreground" id="casesCount">0</div>
                                         <span class="px-2 py-1 text-xs rounded-full bg-yellow-500/10 text-yellow-500 border border-yellow-500/20">Monitor</span>
                                     </div>
                                 </div>
@@ -353,9 +355,9 @@
                             <div class="mt-4 pt-4 border-t border-border">
                                 <p class="text-sm text-red-500 flex items-center gap-1">
                                     <i data-lucide="trending-up" class="w-4 h-4"></i>
-                                    <span id="criticalCasesStatus">Awaiting input</span>
+                                    <span id="casesStatus">Awaiting input</span>
                                 </p>
-                                <div class="mt-2 text-xs text-muted" id="criticalCasesCapacity">ICU Capacity: 0%</div>
+                                <div class="mt-2 text-xs text-muted" id="casesCapacity">Last 7 admissions</div>
                             </div>
                         </div>
                     </div>
@@ -998,49 +1000,60 @@
 
         function renderAlerts() {
             const alertsList = document.getElementById('alertsList');
+            const isHealthcareWorker = checkHealthcareWorkerStatus();
             
             if (alertsData.length === 0) {
-                alertsList.innerHTML = '<p class="text-sm text-muted text-center py-8">No priority alerts. Healthcare workers can add new alerts using the button above.</p>';
+                alertsList.innerHTML = `<p class="text-sm text-muted text-center py-8">No priority alerts. Healthcare workers can add new alerts using the button above.</p>`;
                 return;
             }
 
             alertsList.innerHTML = alertsData.map(alert => {
                 const priorityColors = {
-                    high: { bg: 'bg-red-500/10', border: 'border-red-500', text: 'text-red-500', icon: 'alert-triangle' },
-                    medium: { bg: 'bg-yellow-500/10', border: 'border-yellow-500', text: 'text-yellow-500', icon: 'alert-circle' },
-                    low: { bg: 'bg-blue-500/10', border: 'border-blue-500', text: 'text-blue-500', icon: 'info' }
+                high: { bg: 'bg-red-500/10', border: 'border-red-500', text: 'text-red-500', icon: 'alert-triangle' },
+                medium: { bg: 'bg-yellow-500/10', border: 'border-yellow-500', text: 'text-yellow-500', icon: 'alert-circle' },
+                low: { bg: 'bg-blue-500/10', border: 'border-blue-500', text: 'text-blue-500', icon: 'info' }
                 };
+                
                 const colors = priorityColors[alert.priority];
                 const actionLabel = alert.actionLabel || 'Take Action';
+                
+                // Conditionally render dismiss button only for healthcare workers
+                const dismissButton = isHealthcareWorker 
+                ? `<button onclick="dismissAlert('${alert.id}')" 
+                    class="p-2 text-muted hover:text-foreground transition-colors" 
+                    title="Dismiss alert">
+                    <i data-lucide="x" class="w-4 h-4"></i>
+                    </button>`
+                : '';
 
                 return `
-                    <div class="alert-item flex items-start justify-between p-4 ${colors.bg} rounded-lg border-l-4 ${colors.border}">
-                        <div class="flex items-start gap-3 flex-1">
-                            <i data-lucide="${colors.icon}" class="w-5 h-5 ${colors.text} flex-shrink-0 mt-0.5"></i>
-                            <div class="flex-1">
-                                <h4 class="font-semibold text-foreground mb-1">${alert.title}</h4>
-                                <p class="text-sm text-muted mb-2">${alert.description}</p>
-                                <div class="flex items-center gap-3 text-xs text-muted">
-                                    <span class="uppercase font-medium ${colors.text}">${alert.priority} Priority</span>
-                                    <span>•</span>
-                                    <span>${new Date(alert.timestamp).toLocaleString()}</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="flex items-center gap-2 ml-4">
-                            <button onclick="handleAlertAction('${alert.id}')" class="px-4 py-2 text-sm bg-primary hover:bg-primary/90 text-white rounded-md transition-colors whitespace-nowrap">
-                                ${actionLabel}
-                            </button>
-                            <button onclick="dismissAlert('${alert.id}')" class="healthcare-only p-2 text-muted hover:text-foreground transition-colors" title="Dismiss alert">
-                                <i data-lucide="x" class="w-4 h-4"></i>
-                            </button>
+                <div class="alert-item flex items-start justify-between p-4 ${colors.bg} rounded-lg border-l-4 ${colors.border}">
+                    <div class="flex items-start gap-3 flex-1">
+                    <i data-lucide="${colors.icon}" class="w-5 h-5 ${colors.text} flex-shrink-0 mt-0.5"></i>
+                    <div class="flex-1">
+                        <h4 class="font-semibold text-foreground mb-1">${alert.title}</h4>
+                        <p class="text-sm text-muted mb-2">${alert.description}</p>
+                        <div class="flex items-center gap-3 text-xs text-muted">
+                        <span class="uppercase font-medium ${colors.text}">${alert.priority} Priority</span>
+                        <span>•</span>
+                        <span>${new Date(alert.timestamp).toLocaleString()}</span>
                         </div>
                     </div>
+                    </div>
+                    <div class="flex items-center gap-2 ml-4">
+                    <button onclick="handleAlertAction('${alert.id}')" 
+                        class="px-4 py-2 text-sm bg-primary hover:bg-primary/90 text-white rounded-md transition-colors whitespace-nowrap">
+                        ${actionLabel}
+                    </button>
+                    ${dismissButton}
+                    </div>
+                </div>
                 `;
             }).join('');
-
+            
             lucide.createIcons();
-        }
+            }
+
 
         function handleAlertAction(alertId) {
             const alert = alertsData.find(a => a.id === alertId);
@@ -1050,9 +1063,25 @@
         }
 
         function dismissAlert(alertId) {
+            // Check if user is a healthcare worker
+            const isHealthcareWorker = checkHealthcareWorkerStatus();
+            
+            if (!isHealthcareWorker) {
+                alert('Only healthcare workers can dismiss priority alerts.');
+                return;
+            }
+            
+            // Proceed with dismissing the alert
             alertsData = alertsData.filter(a => a.id !== alertId);
             renderAlerts();
-        }
+            }
+
+        // Add this helper function to check user role
+            function checkHealthcareWorkerStatus() {
+                const userRoleBadge = document.getElementById('userRoleBadge');
+                const roleText = userRoleBadge.textContent.trim();
+                return roleText === 'Healthcare Worker';
+                }
 
         function showView(viewId) {
             const views = document.querySelectorAll('.view');
@@ -1430,6 +1459,67 @@
             }
         }
 
+                // Calculate running total for patients chart
+        function calculateRunningTotalChart(patients) {
+            if (patients.length === 0) {
+                return [0, 0, 0, 0, 0, 0, 0];
+            }
+
+            const recentPatients = patients.slice(-7);
+            const runningTotals = [];
+
+            for (let i = 0; i < 7; i++) {
+                if (i < recentPatients.length) {
+                    runningTotals.push(i + 1);
+                } else {
+                    runningTotals.push(0);
+                }
+            }
+
+            if (patients.length > 7) {
+                const startCount = patients.length - 7;
+                return runningTotals.map((val, idx) => val > 0 ? startCount + idx + 1 : 0);
+            }
+
+            return runningTotals;
+        }
+
+        // Calculate severity level values with colors for dots
+        // High = 3 (red), Medium = 2 (yellow), Low = 1 (green)
+        function calculateSeverityLevelChart(patients) {
+            if (patients.length === 0) {
+                return { values: [0, 0, 0, 0, 0, 0, 0], colors: [] };
+            }
+
+            const recentPatients = patients.slice(-7);
+            const severityValues = [];
+            const severityColors = [];
+
+            for (let i = 0; i < 7; i++) {
+                if (i < recentPatients.length) {
+                    const severity = recentPatients[i].severity;
+                    if (severity === 'High') {
+                        severityValues.push(3);
+                        severityColors.push('#ef4444'); // Red for High
+                    } else if (severity === 'Medium') {
+                        severityValues.push(2);
+                        severityColors.push('#eab308'); // Yellow for Medium
+                    } else if (severity === 'Low') {
+                        severityValues.push(1);
+                        severityColors.push('#22c55e'); // Green for Low
+                    } else {
+                        severityValues.push(0);
+                        severityColors.push('#d1d5db'); // Gray for unknown
+                    }
+                } else {
+                    severityValues.push(0);
+                    severityColors.push('#d1d5db');
+                }
+            }
+
+            return { values: severityValues, colors: severityColors };
+        }
+
         function updateDashboardMetrics() {
             const totalPatients = patientsData.length;
             const criticalCases = patientsData.filter(p => p.severity === 'High').length;
@@ -1438,23 +1528,41 @@
             document.getElementById('totalPatientsStatus').textContent = totalPatients > 0 ? `+${totalPatients} this week` : 'Awaiting input';
             document.getElementById('totalPatientsAvg').textContent = `Daily Avg: ${Math.ceil(totalPatients / 7)} patients`;
 
-            document.getElementById('criticalCasesCount').textContent = criticalCases;
-            document.getElementById('criticalCasesStatus').textContent = criticalCases > 0 ? `${criticalCases} requiring attention` : 'Awaiting input';
-            document.getElementById('criticalCasesCapacity').textContent = `ICU Capacity: ${Math.min(criticalCases * 10, 100)}%`;
+            document.getElementById('casesCount').textContent = Math.min(patientsData.length, 7);
+            const recentPatients = patientsData.slice(-7);
+            const highCount = recentPatients.filter(p => p.severity === 'High').length;
+            const mediumCount = recentPatients.filter(p => p.severity === 'Medium').length;
+            const lowCount = recentPatients.filter(p => p.severity === 'Low').length;
+
+            let statusText = '';
+            if (highCount > 0) statusText += `${highCount} High`;
+            if (mediumCount > 0) statusText += (statusText ? ', ' : '') + `${mediumCount} Medium`;
+            if (lowCount > 0) statusText += (statusText ? ', ' : '') + `${lowCount} Low`;
+
+            document.getElementById('casesStatus').textContent = statusText || 'Awaiting input';
+            document.getElementById('casesCapacity').textContent = 'Last 7 admissions';
 
             const today = new Date().toISOString().split('T')[0];
             const newPatientsToday = patientsData.filter(p => p.admissionDate === today).length;
             document.getElementById('newPatientsToday').textContent = newPatientsToday;
             document.getElementById('newPatientsTodayStatus').textContent = newPatientsToday > 0 ? `+${newPatientsToday} today` : 'Awaiting input';
 
+            // Calculate running totals and severity levels
+            const patientChartData = calculateRunningTotalChart(patientsData);
+            const casesChartData = calculateSeverityLevelChart(patientsData);
+
             if (chartsMap.patientsChart) {
-                chartsMap.patientsChart.data.datasets[0].data = [totalPatients, totalPatients, totalPatients, totalPatients, totalPatients, totalPatients, totalPatients];
+                chartsMap.patientsChart.data.datasets[0].data = patientChartData;
                 chartsMap.patientsChart.update();
             }
 
-            if (chartsMap.criticalChart) {
-                chartsMap.criticalChart.data.datasets[0].data = [criticalCases, criticalCases, criticalCases, criticalCases, criticalCases, criticalCases, criticalCases];
-                chartsMap.criticalChart.update();
+            if (chartsMap.casesChart) {
+                chartsMap.casesChart.data.datasets[0].data = casesChartData.values;
+                chartsMap.casesChart.data.datasets[0].pointBackgroundColor = casesChartData.colors;
+                chartsMap.casesChart.data.datasets[0].pointBorderColor = casesChartData.colors;
+                chartsMap.casesChart.data.datasets[0].pointRadius = 6;
+                chartsMap.casesChart.data.datasets[0].pointHoverRadius = 8;
+                chartsMap.casesChart.update();
             }
         }
 
@@ -1627,17 +1735,50 @@
             });
 
             loginForm.addEventListener('submit', (e) => {
-                e.preventDefault(); 
-        
-                const email = document.getElementById('email').value;
-                const password = document.getElementById('password').value;
+                e.preventDefault();
 
+                const emailInput = document.getElementById('email');
+                const passwordInput = document.getElementById('password');
+                const email = (emailInput.value || '').trim();
+                const password = (passwordInput.value || '').trim();
+
+                // Basic checks
                 if (email === '' || password === '') {
                     errorMessage.textContent = 'Please enter both email and password.';
                     errorMessage.classList.remove('hidden');
                     return;
                 }
 
+                // Ensure email contains '@'
+                if (!email.includes('@')) {
+                    errorMessage.textContent = 'Please enter a valid email address (must include @).';
+                    errorMessage.classList.remove('hidden');
+                    emailInput.focus();
+                    return;
+                }
+
+                // Optional: stronger but simple email pattern (user can decide to use it)
+                const simpleEmailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                if (!simpleEmailRegex.test(email)) {
+                    errorMessage.textContent = 'Please enter a valid email address.';
+                    errorMessage.classList.remove('hidden');
+                    emailInput.focus();
+                    return;
+                }
+
+                // Optional: password minimum (recommended)
+                if (password.length < 6) {
+                    errorMessage.textContent = 'Password must be at least 6 characters.';
+                    errorMessage.classList.remove('hidden');
+                    passwordInput.focus();
+                    return;
+                }
+
+                // Clear any previous error
+                errorMessage.classList.add('hidden');
+                errorMessage.textContent = '';
+
+                // Proceed with the existing post-login UI updates (no change to logic)
                 userRoleBadge.textContent = 'Healthcare Worker';
                 userRoleBadge.className = 'px-3 py-1 text-sm rounded-full bg-green-500/10 text-green-500 border border-green-500/20';
                 logoutBtnText.textContent = 'Log Out';
@@ -1648,7 +1789,7 @@
                 });
 
                 loginForm.reset();
-                
+
                 showView('dashboardView');
                 lucide.createIcons();
                 setTimeout(() => {
@@ -1656,7 +1797,7 @@
                     renderAlerts();
                     renderTrainingModules();
                 }, 100);
-            });
+                });
 
             tabButtons.forEach(button => {
                 button.addEventListener('click', () => {
@@ -1814,7 +1955,7 @@
                 options: chartConfig
             });
 
-            chartsMap.criticalChart = new Chart(document.getElementById('criticalChart'), {
+            chartsMap.casesChart = new Chart(document.getElementById('criticalChart'), {
                 type: 'line',
                 data: {
                     labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
