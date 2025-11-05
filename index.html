@@ -339,9 +339,9 @@
                         <div class="bg-card border border-border rounded-lg p-6 hover:border-primary/50 transition-colors">
                             <div class="flex items-center justify-between mb-4">
                                 <div>
-                                    <h3 class="text-sm font-medium text-muted uppercase tracking-wide">Cases</h3>
+                                    <h3 class="text-sm font-medium text-muted uppercase tracking-wide">Critical Cases</h3>
                                     <div class="flex items-center gap-2 mt-2">
-                                        <div class="text-3xl font-bold text-foreground" id="casesCount">0</div>
+                                        <div class="text-3xl font-bold text-foreground" id="criticalCasesCount">0</div>
                                         <span class="px-2 py-1 text-xs rounded-full bg-yellow-500/10 text-yellow-500 border border-yellow-500/20">Monitor</span>
                                     </div>
                                 </div>
@@ -355,9 +355,9 @@
                             <div class="mt-4 pt-4 border-t border-border">
                                 <p class="text-sm text-red-500 flex items-center gap-1">
                                     <i data-lucide="trending-up" class="w-4 h-4"></i>
-                                    <span id="casesStatus">Awaiting input</span>
+                                    <span id="criticalCasesStatus">Awaiting input</span>
                                 </p>
-                                <div class="mt-2 text-xs text-muted" id="casesCapacity">Last 7 admissions</div>
+                                <div class="mt-2 text-xs text-muted" id="criticalCasesCapacity">ICU Capacity: 0%</div>
                             </div>
                         </div>
                     </div>
@@ -795,12 +795,12 @@
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                         <div class="bg-card border border-border rounded-lg p-6">
                             <h3 class="text-sm text-muted mb-4">Available Modules</h3>
-                            <div class="text-3xl font-bold text-foreground" id="availableModulesCount">25</div>
+                            <div class="text-3xl font-bold text-foreground" id="availableModulesCount">0</div>
                             <p class="text-sm text-muted mt-2">Online training resources</p>
                         </div>
                         <div class="bg-card border border-border rounded-lg p-6">
                             <h3 class="text-sm text-muted mb-4">Free Resources</h3>
-                            <div class="text-3xl font-bold text-foreground">18</div>
+                            <div class="text-3xl font-bold text-foreground" id="freeResourcesCount">0</div>
                             <p class="text-sm text-green-500 flex items-center gap-1 mt-2">
                                 <i data-lucide="check-circle" class="w-4 h-4"></i>
                                 No cost access
@@ -808,7 +808,7 @@
                         </div>
                         <div class="bg-card border border-border rounded-lg p-6">
                             <h3 class="text-sm text-muted mb-4">With Certificates</h3>
-                            <div class="text-3xl font-bold text-foreground">12</div>
+                            <div class="text-3xl font-bold text-foreground" id="certificatesCount">0</div>
                             <p class="text-sm text-muted mt-2">Certificate available</p>
                         </div>
                     </div>
@@ -858,55 +858,328 @@
         const trainingModules = [
             {
                 id: 1,
-                title: "WHO COVID-19 Clinical Management",
-                provider: "World Health Organization",
-                category: "clinical",
-                level: "intermediate",
-                duration: "4-6 hours",
-                description: "Comprehensive guide to clinical management of COVID-19 patients, including diagnosis, treatment protocols, and monitoring.",
-                url: "https://www.who.int/publications/i/item/WHO-2019-nCoV-clinical-2021-2",
+                title: 'WHO COVID-19 Clinical Management',
+                provider: 'World Health Organization',
+                category: 'clinical',
+                level: 'intermediate',
+                duration: '4-6 hours',
+                description: 'Comprehensive guide to clinical management of COVID-19 patients, including diagnosis, treatment protocols, and monitoring.',
+                url: 'https://www.who.int/publications/i/item/WHO-2019-nCoV-clinical-2021-2',
                 isFree: true,
                 hasCertificate: false,
-                tags: ["COVID-19", "Clinical Care", "Treatment"]
+                tags: ['COVID-19', 'Clinical Care', 'Treatment']
             },
             {
                 id: 2,
-                title: "Basic Life Support (BLS)",
-                provider: "American Heart Association",
-                category: "emergency",
-                level: "beginner",
-                duration: "2-3 hours",
-                description: "Learn essential CPR skills, use of AED, and relief of choking in adults, children, and infants.",
-                url: "https://cpr.heart.org/en/courses/basic-life-support-bls-training",
+                title: 'Basic Life Support (BLS)',
+                provider: 'American Heart Association',
+                category: 'emergency',
+                level: 'beginner',
+                duration: '2-3 hours',
+                description: 'Learn essential CPR skills, use of AED, and relief of choking in adults, children, and infants.',
+                url: 'https://cpr.heart.org/en/courses/basic-life-support-bls-training',
                 isFree: false,
                 hasCertificate: true,
-                tags: ["CPR", "Emergency", "Life Support"]
+                tags: ['CPR', 'Emergency', 'Life Support']
             },
             {
                 id: 3,
-                title: "Infection Prevention and Control",
-                provider: "CDC",
-                category: "safety",
-                level: "intermediate",
-                duration: "3-4 hours",
-                description: "Evidence-based strategies for preventing healthcare-associated infections and implementing control measures.",
-                url: "https://www.cdc.gov/infection-control/",
+                title: 'Infection Prevention and Control',
+                provider: 'CDC',
+                category: 'safety',
+                level: 'intermediate',
+                duration: '3-4 hours',
+                description: 'Evidence-based strategies for preventing healthcare-associated infections and implementing control measures.',
+                url: 'https://www.cdc.gov/infection-control',
                 isFree: true,
                 hasCertificate: false,
-                tags: ["Infection Control", "Safety", "Prevention"]
+                tags: ['Infection Control', 'Safety', 'Prevention']
             },
             {
                 id: 4,
-                title: "Patient Safety Fundamentals",
-                provider: "Institute for Healthcare Improvement",
-                category: "safety",
-                level: "beginner",
-                duration: "2 hours",
-                description: "Introduction to patient safety principles, error prevention, and creating a culture of safety.",
-                url: "https://www.ihi.org/education/InPersonTraining/patient-safety",
+                title: 'Patient Safety Fundamentals',
+                provider: 'Institute for Healthcare Improvement',
+                category: 'safety',
+                level: 'beginner',
+                duration: '2 hours',
+                description: 'Introduction to patient safety principles, error prevention, and creating a culture of safety.',
+                url: 'https://www.ihi.org/education/InPersonTraining/patient-safety',
                 isFree: true,
                 hasCertificate: true,
-                tags: ["Patient Safety", "Quality", "Healthcare"]
+                tags: ['Patient Safety', 'Quality', 'Healthcare']
+            },
+            {
+                id: 5,
+                title: 'Advanced Cardiac Life Support (ACLS)',
+                provider: 'American Heart Association',
+                category: 'emergency',
+                level: 'advanced',
+                duration: '8-10 hours',
+                description: 'Advanced cardiovascular emergency care including cardiac arrest, stroke, and acute coronary syndromes.',
+                url: 'https://cpr.heart.org/en/courses/acls',
+                isFree: false,
+                hasCertificate: true,
+                tags: ['ACLS', 'Emergency', 'Cardiac']
+            },
+            {
+                id: 6,
+                title: 'Pediatric Advanced Life Support (PALS)',
+                provider: 'American Heart Association',
+                category: 'emergency',
+                level: 'advanced',
+                duration: '7-9 hours',
+                description: 'Systematic approach to pediatric assessment, basic life support, PALS algorithms, and effective resuscitation.',
+                url: 'https://cpr.heart.org/en/courses/pals',
+                isFree: false,
+                hasCertificate: true,
+                tags: ['PALS', 'Pediatrics', 'Emergency']
+            },
+            {
+                id: 7,
+                title: 'Wound Care Management',
+                provider: 'Wound Care Education Institute',
+                category: 'clinical',
+                level: 'intermediate',
+                duration: '4-5 hours',
+                description: 'Comprehensive wound assessment, treatment options, and evidence-based wound care practices.',
+                url: 'https://wcei.net',
+                isFree: true,
+                hasCertificate: true,
+                tags: ['Wound Care', 'Clinical', 'Treatment']
+            },
+            {
+                id: 8,
+                title: 'Medication Administration Safety',
+                provider: 'Institute for Safe Medication Practices',
+                category: 'safety',
+                level: 'beginner',
+                duration: '2-3 hours',
+                description: 'Best practices for safe medication administration and error prevention strategies.',
+                url: 'https://www.ismp.org/resources',
+                isFree: true,
+                hasCertificate: false,
+                tags: ['Medication', 'Safety', 'Administration']
+            },
+            {
+                id: 9,
+                title: 'Healthcare Communication Skills',
+                provider: 'Health Communication Partners',
+                category: 'communication',
+                level: 'beginner',
+                duration: '3 hours',
+                description: 'Effective communication techniques for patient interactions, family conferences, and team collaboration.',
+                url: 'https://healthcommunicationpartners.com',
+                isFree: true,
+                hasCertificate: true,
+                tags: ['Communication', 'Patient Care', 'Teamwork']
+            },
+            {
+                id: 10,
+                title: 'Critical Care Nursing Essentials',
+                provider: 'American Association of Critical-Care Nurses',
+                category: 'clinical',
+                level: 'advanced',
+                duration: '6-8 hours',
+                description: 'Advanced critical care concepts including hemodynamic monitoring, ventilator management, and complex patient care.',
+                url: 'https://www.aacn.org/education',
+                isFree: false,
+                hasCertificate: true,
+                tags: ['Critical Care', 'ICU', 'Advanced']
+            },
+            {
+                id: 11,
+                title: 'Diabetes Management for Healthcare Providers',
+                provider: 'American Diabetes Association',
+                category: 'clinical',
+                level: 'intermediate',
+                duration: '4 hours',
+                description: 'Comprehensive diabetes care including diagnosis, treatment plans, medication management, and patient education.',
+                url: 'https://professional.diabetes.org',
+                isFree: true,
+                hasCertificate: true,
+                tags: ['Diabetes', 'Chronic Disease', 'Management']
+            },
+            {
+                id: 12,
+                title: 'Mental Health First Aid',
+                provider: 'National Council for Mental Wellbeing',
+                category: 'clinical',
+                level: 'beginner',
+                duration: '3-4 hours',
+                description: 'Recognize and respond to signs of mental illness and substance use disorders in healthcare settings.',
+                url: 'https://www.mentalhealthfirstaid.org',
+                isFree: true,
+                hasCertificate: true,
+                tags: ['Mental Health', 'Crisis', 'First Aid']
+            },
+            {
+                id: 13,
+                title: 'Surgical Asepsis and Sterile Technique',
+                provider: 'Association of periOperative Registered Nurses',
+                category: 'clinical',
+                level: 'intermediate',
+                duration: '3-4 hours',
+                description: 'Principles of surgical asepsis, sterile field maintenance, and infection prevention in surgical settings.',
+                url: 'https://www.aorn.org/education',
+                isFree: false,
+                hasCertificate: true,
+                tags: ['Surgery', 'Sterile Technique', 'Infection Control']
+            },
+            {
+                id: 14,
+                title: 'Neonatal Resuscitation Program (NRP)',
+                provider: 'American Academy of Pediatrics',
+                category: 'emergency',
+                level: 'advanced',
+                duration: '5-6 hours',
+                description: 'Evidence-based approach to newborn resuscitation and stabilization at birth.',
+                url: 'https://www.aap.org/nrp',
+                isFree: false,
+                hasCertificate: true,
+                tags: ['Neonatal', 'Resuscitation', 'Pediatrics']
+            },
+            {
+                id: 15,
+                title: 'Pain Management Strategies',
+                provider: 'American Pain Society',
+                category: 'clinical',
+                level: 'intermediate',
+                duration: '4 hours',
+                description: 'Multimodal pain assessment and management strategies for acute and chronic pain conditions.',
+                url: 'https://americanpainsociety.org',
+                isFree: true,
+                hasCertificate: false,
+                tags: ['Pain Management', 'Patient Care', 'Treatment']
+            },
+            {
+                id: 16,
+                title: 'Healthcare Leadership Fundamentals',
+                provider: 'Healthcare Leadership Alliance',
+                category: 'management',
+                level: 'intermediate',
+                duration: '5-6 hours',
+                description: 'Essential leadership skills for healthcare professionals including team management and decision-making.',
+                url: 'https://healthcareleadershipalliance.org',
+                isFree: true,
+                hasCertificate: true,
+                tags: ['Leadership', 'Management', 'Administration']
+            },
+            {
+                id: 17,
+                title: 'Electronic Health Records Training',
+                provider: 'Office of the National Coordinator for Health IT',
+                category: 'management',
+                level: 'beginner',
+                duration: '2-3 hours',
+                description: 'Navigate and utilize electronic health record systems efficiently and securely.',
+                url: 'https://www.healthit.gov/topic/certification-ehrs',
+                isFree: true,
+                hasCertificate: false,
+                tags: ['EHR', 'Technology', 'Documentation']
+            },
+            {
+                id: 18,
+                title: 'Trauma Nursing Core Course (TNCC)',
+                provider: 'Emergency Nurses Association',
+                category: 'emergency',
+                level: 'advanced',
+                duration: '8-12 hours',
+                description: 'Systematic approach to trauma assessment and evidence-based interventions for trauma patients.',
+                url: 'https://www.ena.org/education/tncc',
+                isFree: false,
+                hasCertificate: true,
+                tags: ['Trauma', 'Emergency', 'Advanced']
+            },
+            {
+                id: 19,
+                title: 'Pharmacology Basics for Nurses',
+                provider: 'Nursing Pharmacology Education',
+                category: 'clinical',
+                level: 'beginner',
+                duration: '4-5 hours',
+                description: 'Foundational pharmacology principles, drug classifications, and safe medication practices.',
+                url: 'https://nursingpharmacology.com',
+                isFree: true,
+                hasCertificate: true,
+                tags: ['Pharmacology', 'Medication', 'Education']
+            },
+            {
+                id: 20,
+                title: 'Geriatric Care Essentials',
+                provider: 'American Geriatrics Society',
+                category: 'clinical',
+                level: 'intermediate',
+                duration: '4 hours',
+                description: 'Specialized care for elderly patients including age-related conditions and comprehensive assessment.',
+                url: 'https://www.americangeriatrics.org/education',
+                isFree: true,
+                hasCertificate: true,
+                tags: ['Geriatrics', 'Elderly Care', 'Specialized']
+            },
+            {
+                id: 21,
+                title: 'Healthcare Quality Improvement',
+                provider: 'Institute for Healthcare Improvement',
+                category: 'management',
+                level: 'intermediate',
+                duration: '3-4 hours',
+                description: 'Quality improvement methodologies including PDSA cycles and data-driven healthcare improvements.',
+                url: 'https://www.ihi.org/education/IHIOpenSchool',
+                isFree: true,
+                hasCertificate: true,
+                tags: ['Quality', 'Improvement', 'Management']
+            },
+            {
+                id: 22,
+                title: 'Cultural Competence in Healthcare',
+                provider: 'National Center for Cultural Competence',
+                category: 'communication',
+                level: 'beginner',
+                duration: '2-3 hours',
+                description: 'Culturally responsive care practices and strategies for diverse patient populations.',
+                url: 'https://nccc.georgetown.edu',
+                isFree: true,
+                hasCertificate: false,
+                tags: ['Cultural Competence', 'Diversity', 'Patient Care']
+            },
+            {
+                id: 23,
+                title: 'Sepsis Recognition and Management',
+                provider: 'Sepsis Alliance',
+                category: 'clinical',
+                level: 'intermediate',
+                duration: '3 hours',
+                description: 'Early recognition, assessment, and evidence-based management of sepsis and septic shock.',
+                url: 'https://www.sepsis.org/education',
+                isFree: true,
+                hasCertificate: false,
+                tags: ['Sepsis', 'Critical Care', 'Emergency']
+            },
+            {
+                id: 24,
+                title: 'Oncology Nursing Certification Prep',
+                provider: 'Oncology Nursing Society',
+                category: 'clinical',
+                level: 'advanced',
+                duration: '10-15 hours',
+                description: 'Comprehensive preparation for oncology nursing certification including cancer treatments and symptom management.',
+                url: 'https://www.ons.org/certification',
+                isFree: false,
+                hasCertificate: true,
+                tags: ['Oncology', 'Cancer', 'Certification']
+            },
+            {
+                id: 25,
+                title: 'Healthcare Ethics and Legal Issues',
+                provider: 'American Nurses Association',
+                category: 'management',
+                level: 'intermediate',
+                duration: '3-4 hours',
+                description: 'Ethical decision-making, patient rights, legal responsibilities, and professional boundaries.',
+                url: 'https://www.nursingworld.org/education',
+                isFree: true,
+                hasCertificate: false,
+                tags: ['Ethics', 'Legal', 'Professional']
             }
         ];
 
@@ -939,7 +1212,18 @@
             }
         };
 
+                function updateTrainingMetrics() {
+            const totalModules = trainingModules.length;
+            const freeModules = trainingModules.filter(m => m.isFree).length;
+            const certificateModules = trainingModules.filter(m => m.hasCertificate).length;
+
+            document.getElementById('availableModulesCount').textContent = totalModules;
+            document.getElementById('freeResourcesCount').textContent = freeModules;
+            document.getElementById('certificatesCount').textContent = certificateModules;
+        }
+
         function renderTrainingModules(filter = 'all') {
+            updateTrainingMetrics();
             const grid = document.getElementById('trainingModulesGrid');
             const filteredModules = filter === 'all' 
                 ? trainingModules 
@@ -1459,67 +1743,6 @@
             }
         }
 
-                // Calculate running total for patients chart
-        function calculateRunningTotalChart(patients) {
-            if (patients.length === 0) {
-                return [0, 0, 0, 0, 0, 0, 0];
-            }
-
-            const recentPatients = patients.slice(-7);
-            const runningTotals = [];
-
-            for (let i = 0; i < 7; i++) {
-                if (i < recentPatients.length) {
-                    runningTotals.push(i + 1);
-                } else {
-                    runningTotals.push(0);
-                }
-            }
-
-            if (patients.length > 7) {
-                const startCount = patients.length - 7;
-                return runningTotals.map((val, idx) => val > 0 ? startCount + idx + 1 : 0);
-            }
-
-            return runningTotals;
-        }
-
-        // Calculate severity level values with colors for dots
-        // High = 3 (red), Medium = 2 (yellow), Low = 1 (green)
-        function calculateSeverityLevelChart(patients) {
-            if (patients.length === 0) {
-                return { values: [0, 0, 0, 0, 0, 0, 0], colors: [] };
-            }
-
-            const recentPatients = patients.slice(-7);
-            const severityValues = [];
-            const severityColors = [];
-
-            for (let i = 0; i < 7; i++) {
-                if (i < recentPatients.length) {
-                    const severity = recentPatients[i].severity;
-                    if (severity === 'High') {
-                        severityValues.push(3);
-                        severityColors.push('#ef4444'); // Red for High
-                    } else if (severity === 'Medium') {
-                        severityValues.push(2);
-                        severityColors.push('#eab308'); // Yellow for Medium
-                    } else if (severity === 'Low') {
-                        severityValues.push(1);
-                        severityColors.push('#22c55e'); // Green for Low
-                    } else {
-                        severityValues.push(0);
-                        severityColors.push('#d1d5db'); // Gray for unknown
-                    }
-                } else {
-                    severityValues.push(0);
-                    severityColors.push('#d1d5db');
-                }
-            }
-
-            return { values: severityValues, colors: severityColors };
-        }
-
         function updateDashboardMetrics() {
             const totalPatients = patientsData.length;
             const criticalCases = patientsData.filter(p => p.severity === 'High').length;
@@ -1528,41 +1751,23 @@
             document.getElementById('totalPatientsStatus').textContent = totalPatients > 0 ? `+${totalPatients} this week` : 'Awaiting input';
             document.getElementById('totalPatientsAvg').textContent = `Daily Avg: ${Math.ceil(totalPatients / 7)} patients`;
 
-            document.getElementById('casesCount').textContent = Math.min(patientsData.length, 7);
-            const recentPatients = patientsData.slice(-7);
-            const highCount = recentPatients.filter(p => p.severity === 'High').length;
-            const mediumCount = recentPatients.filter(p => p.severity === 'Medium').length;
-            const lowCount = recentPatients.filter(p => p.severity === 'Low').length;
-
-            let statusText = '';
-            if (highCount > 0) statusText += `${highCount} High`;
-            if (mediumCount > 0) statusText += (statusText ? ', ' : '') + `${mediumCount} Medium`;
-            if (lowCount > 0) statusText += (statusText ? ', ' : '') + `${lowCount} Low`;
-
-            document.getElementById('casesStatus').textContent = statusText || 'Awaiting input';
-            document.getElementById('casesCapacity').textContent = 'Last 7 admissions';
+            document.getElementById('criticalCasesCount').textContent = criticalCases;
+            document.getElementById('criticalCasesStatus').textContent = criticalCases > 0 ? `${criticalCases} requiring attention` : 'Awaiting input';
+            document.getElementById('criticalCasesCapacity').textContent = `ICU Capacity: ${Math.min(criticalCases * 10, 100)}%`;
 
             const today = new Date().toISOString().split('T')[0];
             const newPatientsToday = patientsData.filter(p => p.admissionDate === today).length;
             document.getElementById('newPatientsToday').textContent = newPatientsToday;
             document.getElementById('newPatientsTodayStatus').textContent = newPatientsToday > 0 ? `+${newPatientsToday} today` : 'Awaiting input';
 
-            // Calculate running totals and severity levels
-            const patientChartData = calculateRunningTotalChart(patientsData);
-            const casesChartData = calculateSeverityLevelChart(patientsData);
-
             if (chartsMap.patientsChart) {
-                chartsMap.patientsChart.data.datasets[0].data = patientChartData;
+                chartsMap.patientsChart.data.datasets[0].data = [totalPatients, totalPatients, totalPatients, totalPatients, totalPatients, totalPatients, totalPatients];
                 chartsMap.patientsChart.update();
             }
 
-            if (chartsMap.casesChart) {
-                chartsMap.casesChart.data.datasets[0].data = casesChartData.values;
-                chartsMap.casesChart.data.datasets[0].pointBackgroundColor = casesChartData.colors;
-                chartsMap.casesChart.data.datasets[0].pointBorderColor = casesChartData.colors;
-                chartsMap.casesChart.data.datasets[0].pointRadius = 6;
-                chartsMap.casesChart.data.datasets[0].pointHoverRadius = 8;
-                chartsMap.casesChart.update();
+            if (chartsMap.criticalChart) {
+                chartsMap.criticalChart.data.datasets[0].data = [criticalCases, criticalCases, criticalCases, criticalCases, criticalCases, criticalCases, criticalCases];
+                chartsMap.criticalChart.update();
             }
         }
 
@@ -1955,7 +2160,7 @@
                 options: chartConfig
             });
 
-            chartsMap.casesChart = new Chart(document.getElementById('criticalChart'), {
+            chartsMap.criticalChart = new Chart(document.getElementById('criticalChart'), {
                 type: 'line',
                 data: {
                     labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
