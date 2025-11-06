@@ -1,52 +1,43 @@
 <?php
-header('Content-Type: application/json; charset=utf-8');
-$dataFile = __DIR__ . '/../data/alerts.json';
-$method = $_SERVER['REQUEST_METHOD'];
+header('Content-Type: application/json');
+require_once '../config.php';
 
-if ($method === 'GET') {
-    if (!file_exists($dataFile)) { echo json_encode([]); exit; }
-    $json = file_get_contents($dataFile);
-    echo $json === false ? json_encode([]) : $json;
-    exit;
+// Check if user is logged in as healthcare worker
+if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'healthcare_worker') {
+    echo json_encode(['success' => false, 'message' => 'Unauthorized']);
+    exit();
 }
 
-if ($method === 'POST') {
-    $input = json_decode(file_get_contents('php://input'), true);
-    if (!$input) { http_response_code(400); echo json_encode(["error"=>"Invalid JSON"]); exit; }
+$action = isset($_GET['action']) ? $_GET['action'] : '';
 
-    $required = ['title','priority'];
-    foreach ($required as $k) { if (empty($input[$k])) { http_response_code(422); echo json_encode(["error"=>"Missing $k"]); exit; } }
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'add') {
+    $data = json_decode(file_get_contents('php://input'), true);
+    
+    $title = isset($data['title']) ? trim($data['title']) : '';
+    $description = isset($data['description']) ? $data['description'] : '';
+    $priority = isset($data['priority']) ? $data['priority'] : 'medium';
+    $action_label = isset($data['action_label']) ? $data['action_label'] : '';
+    
+    $stmt = $conn->prepare("INSERT INTO alerts (title, description, priority, action_label, created_by, created_at) VALUES (?, ?, ?, ?, ?, NOW())");
+    
+    $stmt->bind_param("ssssi", $title, $description, $priority, $action_label, $_SESSION['user_id']);
+    
+    if ($stmt->execute()) {
+        echo json_encode(['success' => true, 'message' => 'Alert added successfully']);
+    } else {
+        echo json_encode(['success' => false, 'message' => 'Failed to add alert']);
+    }
+    $stmt->close();
+}
 
+if ($_SERVER['REQUEST_METHOD'] === 'GET' && $action === 'list') {
+    $result = $conn->query("SELECT id, title, description, priority, action_label, created_at FROM alerts ORDER BY FIELD(priority, 'high', 'medium', 'low'), created_at DESC");
+    
     $alerts = [];
-    if (file_exists($dataFile)) { $c = file_get_contents($dataFile); $alerts = $c ? json_decode($c, true) : []; if(!is_array($alerts)) $alerts = []; }
-
-    $new = [
-        'id' => uniqid('a', true),
-        'title' => $input['title'],
-        'priority' => $input['priority'],
-        'details' => $input['details'] ?? '',
-        'timestamp' => date('c')
-    ];
-
-    $alerts[] = $new;
-    if (file_put_contents($dataFile, json_encode($alerts, JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES), LOCK_EX) === false) { http_response_code(500); echo json_encode(['error'=>'Unable to save']); exit; }
-
-    echo json_encode($new);
-    exit;
+    while ($row = $result->fetch_assoc()) {
+        $alerts[] = $row;
+    }
+    
+    echo json_encode(['success' => true, 'alerts' => $alerts]);
 }
-
-if ($method === 'DELETE') {
-    parse_str($_SERVER['QUERY_STRING'] ?? '', $qs);
-    $id = $qs['id'] ?? null;
-    if (!$id) { http_response_code(400); echo json_encode(['error'=>'Missing id']); exit; }
-    $alerts = [];
-    if (file_exists($dataFile)) { $c = file_get_contents($dataFile); $alerts = $c ? json_decode($c, true) : []; if(!is_array($alerts)) $alerts = []; }
-    $before = count($alerts);
-    $alerts = array_values(array_filter($alerts, function($a) use ($id) { return ($a['id'] ?? '') !== $id; }));
-    if (file_put_contents($dataFile, json_encode($alerts, JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES), LOCK_EX) === false) { http_response_code(500); echo json_encode(['error'=>'Unable to save']); exit; }
-    echo json_encode(['deleted' => ($before - count($alerts))]);
-    exit;
-}
-
-http_response_code(405);
-echo json_encode(['error'=>'Method not allowed']);
+?>

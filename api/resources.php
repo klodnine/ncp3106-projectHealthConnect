@@ -1,56 +1,47 @@
 <?php
-header('Content-Type: application/json; charset=utf-8');
-$dataFile = __DIR__ . '/../data/resources.json';
-$method = $_SERVER['REQUEST_METHOD'];
+header('Content-Type: application/json');
+require_once '../config.php';
 
-if ($method === 'GET') {
-    if (!file_exists($dataFile)) { echo json_encode([]); exit; }
-    $json = file_get_contents($dataFile);
-    echo $json === false ? json_encode([]) : $json;
-    exit;
+// Check if user is logged in as healthcare worker
+if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'healthcare_worker') {
+    echo json_encode(['success' => false, 'message' => 'Unauthorized']);
+    exit();
 }
 
-if ($method === 'POST') {
-    $input = json_decode(file_get_contents('php://input'), true);
-    if (!$input) { http_response_code(400); echo json_encode(["error"=>"Invalid JSON"]); exit; }
+$action = isset($_GET['action']) ? $_GET['action'] : '';
 
-    $required = ['name','category','stock','threshold'];
-    foreach ($required as $k) {
-        if (!isset($input[$k])) { http_response_code(422); echo json_encode(["error"=>"Missing $k"]); exit; }
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'add') {
+    $data = json_decode(file_get_contents('php://input'), true);
+    
+    $resource_name = isset($data['name']) ? trim($data['name']) : '';
+    $category = isset($data['category']) ? $data['category'] : '';
+    $stock = isset($data['stock']) ? intval($data['stock']) : 0;
+    $unit = isset($data['unit']) ? $data['unit'] : '';
+    $threshold = isset($data['threshold']) ? intval($data['threshold']) : 0;
+    $usage_rate = isset($data['usage_rate']) ? floatval($data['usage_rate']) : 0;
+    
+    $stmt = $conn->prepare("INSERT INTO resources (name, category, current_stock, unit, minimum_threshold, daily_usage_rate, added_by, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, NOW())");
+    
+    $stmt->bind_param("ssisidi", 
+        $resource_name, $category, $stock, $unit, $threshold, $usage_rate, $_SESSION['user_id']
+    );
+    
+    if ($stmt->execute()) {
+        echo json_encode(['success' => true, 'message' => 'Resource added successfully']);
+    } else {
+        echo json_encode(['success' => false, 'message' => 'Failed to add resource']);
     }
-
-    $items = [];
-    if (file_exists($dataFile)) { $c = file_get_contents($dataFile); $items = $c ? json_decode($c, true) : []; if(!is_array($items)) $items = []; }
-
-    $new = [
-        'id' => uniqid('r', true),
-        'name' => $input['name'],
-        'category' => $input['category'],
-        'stock' => (int)$input['stock'],
-        'threshold' => (int)$input['threshold'],
-        'usageRate' => isset($input['usageRate']) ? (float)$input['usageRate'] : 0,
-        'timestamp' => date('c')
-    ];
-
-    $items[] = $new;
-    if (file_put_contents($dataFile, json_encode($items, JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES), LOCK_EX) === false) { http_response_code(500); echo json_encode(['error'=>'Unable to save']); exit; }
-
-    echo json_encode($new);
-    exit;
+    $stmt->close();
 }
 
-if ($method === 'DELETE') {
-    parse_str($_SERVER['QUERY_STRING'] ?? '', $qs);
-    $id = $qs['id'] ?? null;
-    if (!$id) { http_response_code(400); echo json_encode(['error'=>'Missing id']); exit; }
-    $items = [];
-    if (file_exists($dataFile)) { $c = file_get_contents($dataFile); $items = $c ? json_decode($c, true) : []; if(!is_array($items)) $items = []; }
-    $before = count($items);
-    $items = array_values(array_filter($items, function($i) use ($id) { return ($i['id'] ?? '') !== $id; }));
-    if (file_put_contents($dataFile, json_encode($items, JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES), LOCK_EX) === false) { http_response_code(500); echo json_encode(['error'=>'Unable to save']); exit; }
-    echo json_encode(['deleted' => ($before - count($items))]);
-    exit;
+if ($_SERVER['REQUEST_METHOD'] === 'GET' && $action === 'list') {
+    $result = $conn->query("SELECT id, name, category, current_stock, unit, minimum_threshold, daily_usage_rate, created_at FROM resources ORDER BY created_at DESC");
+    
+    $resources = [];
+    while ($row = $result->fetch_assoc()) {
+        $resources[] = $row;
+    }
+    
+    echo json_encode(['success' => true, 'resources' => $resources]);
 }
-
-http_response_code(405);
-echo json_encode(['error'=>'Method not allowed']);
+?>
