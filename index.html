@@ -176,6 +176,95 @@
             </div>
         </div>
     
+
+        <!-- Sign Up View (First Step - Required) -->
+        <div id="signupView" class="view">
+            <div class="min-h-screen flex items-center justify-center relative overflow-hidden bg-white">
+                <div class="absolute inset-0 bg-gradient-to-b from-white via-white/95 to-white/90 pointer-events-none"></div>
+                <div class="absolute inset-0 opacity-[0.02] pointer-events-none" style="background-image: radial-gradient(circle at 1px 1px, black 1px, transparent 0); background-size: 40px 40px;"></div>
+
+                <div class="relative z-10 w-full max-w-md px-6">
+                    <div class="text-center mb-12">
+                        <h1 class="text-5xl font-bold text-primary mb-2 tracking-tight">HEALTHCARE</h1>
+                        <p class="text-muted text-sm">Community Dashboard</p>
+                    </div>
+
+                    <div class="bg-white/60 backdrop-blur-sm border border-border rounded-lg p-8 shadow-2xl">
+                        <div class="flex items-center justify-between mb-6">
+                            <h2 class="text-2xl font-semibold text-foreground">Create Account</h2>
+                            <button type="button" id="backToRoleFromSignup" class="text-muted hover:text-foreground transition-colors">
+                                <i data-lucide="arrow-left" class="w-5 h-5"></i>
+                            </button>
+                        </div>
+
+                        <form id="signupForm" class="space-y-5">
+                            <div class="space-y-2">
+                                <label for="signupFullName" class="block text-sm font-medium text-foreground">Full Name</label>
+                                <input
+                                    id="signupFullName"
+                                    type="text"
+                                    class="w-full bg-secondary border border-border text-foreground placeholder:text-muted h-12 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                                    placeholder="Enter your full name"
+                                    required
+                                />
+                            </div>
+
+                            <div class="space-y-2">
+                                <label for="signupEmail" class="block text-sm font-medium text-foreground">Email</label>
+                                <input
+                                    id="signupEmail"
+                                    type="email"
+                                    class="w-full bg-secondary border border-border text-foreground placeholder:text-muted h-12 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                                    placeholder="Enter your email"
+                                    required
+                                />
+                            </div>
+
+                            <div class="space-y-2">
+                                <label for="signupPassword" class="block text-sm font-medium text-foreground">Password</label>
+                                <input
+                                    id="signupPassword"
+                                    type="password"
+                                    class="w-full bg-secondary border border-border text-foreground placeholder:text-muted h-12 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                                    placeholder="Create a password (min. 6 characters)"
+                                    required
+                                />
+                            </div>
+
+                            <div class="space-y-2">
+                                <label for="signupConfirmPassword" class="block text-sm font-medium text-foreground">Confirm Password</label>
+                                <input
+                                    id="signupConfirmPassword"
+                                    type="password"
+                                    class="w-full bg-secondary border border-border text-foreground placeholder:text-muted h-12 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                                    placeholder="Re-enter your password"
+                                    required
+                                />
+                            </div>
+
+                            <div id="signupErrorMessage" class="hidden text-sm text-red-700 bg-red-50 border border-red-200 rounded px-3 py-2"></div>
+
+                            <button
+                                type="submit"
+                                class="w-full h-12 bg-primary hover:bg-primary/90 text-white font-semibold text-base rounded-md transition-colors"
+                            >
+                                Create Account
+                            </button>
+                        </form>
+
+                        <div class="mt-6 pt-6 border-t border-border">
+                            <p class="text-muted text-sm text-center">
+                                Already have an account?
+                                <button type="button" id="goToLoginFromSignup" class="text-primary hover:underline font-medium ml-1">
+                                    Sign in here
+                                </button>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div id="loginView" class="view">
             <div class="min-h-screen flex items-center justify-center relative overflow-hidden bg-white">
                 <div class="absolute inset-0 bg-gradient-to-b from-white via-white/95 to-white/90 pointer-events-none"></div>
@@ -2029,9 +2118,11 @@
                 }
 
                 yesHealthcareBtn.addEventListener('click', () => {
-                    showView('loginView');
-                    errorMessage.classList.add('hidden');
-                    errorMessage.textContent = '';
+                    showView('signupView');
+                    const signupError = document.getElementById('signupErrorMessage');
+                    if (signupError) {
+                        signupError.classList.add('hidden');
+                    }
                 });
 
                 noHealthcareBtn.addEventListener('click', () => {
@@ -2056,6 +2147,114 @@
                 backToRoleBtn.addEventListener('click', () => {
                     showView('roleSelectionView');
                 });
+
+                // ============ SIGNUP FIRST AUTHENTICATION ============
+
+                // Back to role selection from signup
+                const backToRoleFromSignup = document.getElementById('backToRoleFromSignup');
+                if (backToRoleFromSignup) {
+                    backToRoleFromSignup.addEventListener('click', () => {
+                        showView('roleSelectionView');
+                        setTimeout(() => lucide.createIcons(), 50);
+                    });
+                }
+
+                // Go to login from signup (for existing users)
+                const goToLoginFromSignup = document.getElementById('goToLoginFromSignup');
+                if (goToLoginFromSignup) {
+                    goToLoginFromSignup.addEventListener('click', () => {
+                        showView('loginView');
+                    });
+                }
+
+                // Handle Signup Form Submission
+                const signupForm = document.getElementById('signupForm');
+                if (signupForm) {
+                    signupForm.addEventListener('submit', (e) => {
+                        e.preventDefault();
+
+                        const fullName = document.getElementById('signupFullName').value.trim();
+                        const email = document.getElementById('signupEmail').value.trim();
+                        const password = document.getElementById('signupPassword').value.trim();
+                        const confirmPassword = document.getElementById('signupConfirmPassword').value.trim();
+                        const errorMsg = document.getElementById('signupErrorMessage');
+
+                        errorMsg.classList.add('hidden');
+                        errorMsg.textContent = '';
+
+                        // Validation
+                        if (!fullName) {
+                            errorMsg.textContent = 'Please enter your full name.';
+                            errorMsg.classList.remove('hidden');
+                            return;
+                        }
+
+                        if (!email) {
+                            errorMsg.textContent = 'Please enter your email address.';
+                            errorMsg.classList.remove('hidden');
+                            return;
+                        }
+
+                        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                        if (!emailRegex.test(email)) {
+                            errorMsg.textContent = 'Please enter a valid email address.';
+                            errorMsg.classList.remove('hidden');
+                            return;
+                        }
+
+                        if (!password) {
+                            errorMsg.textContent = 'Please enter a password.';
+                            errorMsg.classList.remove('hidden');
+                            return;
+                        }
+
+                        if (password.length < 6) {
+                            errorMsg.textContent = 'Password must be at least 6 characters long.';
+                            errorMsg.classList.remove('hidden');
+                            return;
+                        }
+
+                        if (password !== confirmPassword) {
+                            errorMsg.textContent = 'Passwords do not match.';
+                            errorMsg.classList.remove('hidden');
+                            return;
+                        }
+
+                        // Check for existing user
+                        let users = [];
+                        try {
+                            users = JSON.parse(localStorage.getItem('healthcareUsers') || '[]');
+                        } catch (e) {
+                            users = [];
+                        }
+
+                        if (users.find(u => u.email === email)) {
+                            errorMsg.textContent = 'This email is already registered. Please sign in instead.';
+                            errorMsg.classList.remove('hidden');
+                            return;
+                        }
+
+                        // Create new user
+                        const newUser = {
+                            fullName: fullName,
+                            email: email,
+                            password: password,
+                            createdAt: new Date().toISOString()
+                        };
+
+                        users.push(newUser);
+
+                        try {
+                            localStorage.setItem('healthcareUsers', JSON.stringify(users));
+                            signupForm.reset();
+                            alert('✅ Account created successfully! You can now sign in.');
+                            showView('loginView');
+                        } catch (e) {
+                            errorMsg.textContent = 'Error creating account. Please try again.';
+                            errorMsg.classList.remove('hidden');
+                        }
+                    });
+                }
 
                 logoutBtn.addEventListener('click', () => {
                     showView('roleSelectionView');
@@ -2083,6 +2282,28 @@
                         errorMessage.textContent = 'Please enter a valid email address (must include @).';
                         errorMessage.classList.remove('hidden');
                         emailInput.focus();
+                        return;
+                    }
+
+                    // CRITICAL: Verify user exists (MUST SIGN UP FIRST)
+                    let registeredUsers = [];
+                    try {
+                        registeredUsers = JSON.parse(localStorage.getItem('healthcareUsers') || '[]');
+                    } catch (e) {
+                        registeredUsers = [];
+                    }
+
+                    if (registeredUsers.length === 0) {
+                        errorMessage.textContent = '⚠️ No accounts found. Please sign up first.';
+                        errorMessage.classList.remove('hidden');
+                        return;
+                    }
+
+                    const authenticatedUser = registeredUsers.find(u => u.email === email && u.password === password);
+
+                    if (!authenticatedUser) {
+                        errorMessage.textContent = '❌ Invalid credentials. Please sign up if you don\'t have an account.';
+                        errorMessage.classList.remove('hidden');
                         return;
                     }
 
