@@ -1,0 +1,2335 @@
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Healthcare Dashboard</title>
+        <script src="https://cdn.tailwindcss.com"></script>
+        <script src="https://unpkg.com/lucide@latest"></script>
+        <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+        <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+        <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+        <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+        <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.1/dist/MarkerCluster.css" />
+        <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.1/dist/MarkerCluster.Default.css" />
+        <script src="https://unpkg.com/leaflet.markercluster@1.5.1/dist/leaflet.markercluster.js"></script>
+        <script>
+            tailwind.config = {
+                theme: {
+                    extend: {
+                        colors: {
+                            primary: '#E50914',
+                            background: '#FFFFFF',
+                            foreground: '#000000',
+                            card: '#F5F5F5',
+                            border: '#E0E0E0',
+                            secondary: '#FAFAFA',
+                            muted: '#666666'
+                        }
+                    }
+                }
+            }
+        </script>
+        <style>
+            body {
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            }
+            .tab-active {
+                color: #E50914;
+                border-bottom: 2px solid #E50914;
+            }
+            .tab-content {
+                display: none;
+            }
+            .tab-content.active {
+                display: block;
+            }
+            .view {
+                display: none;
+            }
+            .view.active {
+                display: block;
+            }
+            .disease-marker {
+                filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.15));
+                animation: pulse 2s infinite;
+            }
+            @keyframes pulse {
+                0%, 100% { opacity: 1; }
+                50% { opacity: 0.8; }
+            }
+            .leaflet-popup-content {
+                font-size: 12px !important;
+                padding: 8px !important;
+            }
+            .leaflet-popup-content-wrapper {
+                border-radius: 8px !important;
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+            }
+            .map-loading {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                height: 100%;
+                color: #666;
+                font-size: 14px;
+            }
+            #locationPickerMap {
+                height: 400px;
+                width: 100%;
+                border-radius: 8px;
+                border: 1px solid #E0E0E0;
+            }
+            .module-card {
+                transition: all 0.3s ease;
+                cursor: pointer;
+            }
+            .module-card:hover {
+                transform: translateY(-4px);
+                box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+            }
+            .badge {
+                display: inline-flex;
+                align-items: center;
+                padding: 4px 12px;
+                border-radius: 12px;
+                font-size: 11px;
+                font-weight: 600;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+            }
+            .badge-free {
+                background-color: #22c55e20;
+                color: #22c55e;
+                border: 1px solid #22c55e40;
+            }
+            .badge-certificate {
+                background-color: #3b82f620;
+                color: #3b82f6;
+                border: 1px solid #3b82f640;
+            }
+            .badge-beginner {
+                background-color: #eab30820;
+                color: #eab308;
+                border: 1px solid #eab30840;
+            }
+            .badge-intermediate {
+                background-color: #f9731620;
+                color: #f97316;
+                border: 1px solid #f9731640;
+            }
+            .badge-advanced {
+                background-color: #ef444420;
+                color: #ef4444;
+                border: 1px solid #ef444440;
+            }
+            .alert-item {
+                transition: all 0.3s ease;
+            }
+            .alert-item:hover {
+                transform: translateX(4px);
+            }
+        </style>
+    </head>
+    <body class="bg-background">
+        <div id="roleSelectionView" class="view active">
+            <div class="min-h-screen flex items-center justify-center relative overflow-hidden bg-white">
+                <div class="absolute inset-0 bg-gradient-to-b from-white via-white/95 to-white/90 pointer-events-none"></div>
+                <div class="absolute inset-0 opacity-[0.02] pointer-events-none" style="background-image: radial-gradient(circle at 1px 1px, black 1px, transparent 0); background-size: 40px 40px;"></div>
+
+                <div class="relative z-10 w-full max-w-2xl px-6">
+                    <div class="text-center mb-12">
+                        <h1 class="text-5xl font-bold text-primary mb-2 tracking-tight">HEALTHCARE</h1>
+                        <p class="text-muted text-sm">Community Dashboard</p>
+                    </div>
+
+                    <div class="bg-white/60 backdrop-blur-sm border border-border rounded-lg p-8 shadow-2xl">
+                        <h2 class="text-3xl font-semibold text-foreground mb-4 text-center">Welcome</h2>
+                        <p class="text-lg text-muted mb-8 text-center">Are you a healthcare worker?</p>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <button
+                                id="yesHealthcareBtn"
+                                class="h-32 bg-primary hover:bg-primary/90 text-white font-semibold text-xl rounded-lg transition-all hover:scale-105 flex flex-col items-center justify-center gap-3"
+                            >
+                                <i data-lucide="user-check" class="w-12 h-12"></i>
+                                <span>Yes, I am</span>
+                            </button>
+                            
+                            <button
+                                id="noHealthcareBtn"
+                                class="h-32 bg-secondary hover:bg-secondary/80 border-2 border-border hover:border-primary/50 text-foreground font-semibold text-xl rounded-lg transition-all hover:scale-105 flex flex-col items-center justify-center gap-3"
+                            >
+                                <i data-lucide="eye" class="w-12 h-12"></i>
+                                <span>No, just viewing</span>
+                            </button>
+                        </div>
+
+                        <div class="mt-8 pt-6 border-t border-border">
+                            <p class="text-muted text-sm text-center leading-relaxed">
+                                Healthcare workers can input and manage data after authentication.<br>
+                                Viewers can access all dashboard metrics without an account.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    
+        <div id="loginView" class="view">
+            <div class="min-h-screen flex items-center justify-center relative overflow-hidden bg-white">
+                <div class="absolute inset-0 bg-gradient-to-b from-white via-white/95 to-white/90 pointer-events-none"></div>
+                <div class="absolute inset-0 opacity-[0.02] pointer-events-none" style="background-image: radial-gradient(circle at 1px 1px, black 1px, transparent 0); background-size: 40px 40px;"></div>
+
+                <div class="relative z-10 w-full max-w-md px-6">
+                    <div class="text-center mb-12">
+                        <h1 class="text-5xl font-bold text-primary mb-2 tracking-tight">HEALTHCARE</h1>
+                        <p class="text-muted text-sm">Community Dashboard</p>
+                    </div>
+
+                    <div class="bg-white/60 backdrop-blur-sm border border-border rounded-lg p-8 shadow-2xl">
+                        <div class="flex items-center justify-between mb-6">
+                            <h2 class="text-2xl font-semibold text-foreground">Healthcare Worker Sign In</h2>
+                            <button id="backToRoleBtn" class="text-muted hover:text-foreground transition-colors">
+                                <i data-lucide="arrow-left" class="w-5 h-5"></i>
+                            </button>
+                        </div>
+
+                        <form id="loginForm" class="space-y-5">
+                            <!-- Replace existing email input block with this -->
+                            <div class="space-y-2">
+                            <label for="email" class="block text-sm font-medium text-foreground">Email</label>
+                            <input
+                                id="email"5
+                                name="email"
+                                type="email"
+                                class="w-full bg-secondary border border-border text-foreground placeholder:text-muted h-12 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                                placeholder="Enter your email"
+                                required
+                                autocomplete="email"
+                            />
+                            </div>
+
+                            <div class="space-y-2">
+                                <label for="password" class="block text-sm font-medium text-foreground">
+                                    Password
+                                </label>
+                                <input
+                                    id="password"
+                                    type="password"
+                                    class="w-full bg-secondary border border-border text-foreground placeholder:text-muted h-12 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                                    placeholder="Enter your password"
+                                />
+                            </div>
+
+                            <div id="errorMessage" class="hidden text-sm text-red-700 bg-red-50 border border-red-200 rounded px-3 py-2" role="alert" aria-live="assertive"></div>
+                            
+                            <button
+                                type="submit"
+                                class="w-full h-12 bg-primary hover:bg-primary/90 text-white font-semibold text-base rounded-md transition-colors"
+                            >
+                                Sign In
+                            </button>
+                        </form>
+
+                        <div class="mt-6 flex items-center justify-between text-sm">
+                            <label class="flex items-center gap-2 text-muted cursor-pointer">
+                                <input type="checkbox" class="rounded border-border" />
+                                Remember me
+                            </label>
+                            <a href="#" class="text-muted hover:text-foreground transition-colors">
+                                Need help?
+                            </a>
+                        </div>
+
+                        <div class="mt-8 pt-6 border-t border-border">
+                            <p class="text-muted text-sm text-center">
+                                New healthcare worker?
+                                <a href="#" class="text-foreground hover:underline font-medium ml-1">
+                                    Sign up now
+                                </a>
+                            </p>
+                        </div>
+                    </div>
+
+                    <p class="text-center text-muted text-xs mt-8 leading-relaxed">
+                        This page is protected by authentication to ensure the security of your healthcare data.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <div id="dashboardView" class="view">
+            <header class="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-50">
+                <div class="container mx-auto px-6 py-4 flex items-center justify-between">
+                    <h1 class="text-2xl font-bold text-primary">Healthcare Community Dashboard</h1>
+                    <div class="flex items-center gap-4">
+                        <span id="userRoleBadge" class="px-3 py-1 text-sm rounded-full bg-green-500/10 text-green-500 border border-green-500/20">
+                            Role badge will be set dynamically
+                        </span>
+                        <span class="px-3 py-1 text-sm rounded-full bg-green-500/10 text-green-500 border border-green-500/20">
+                            System Online
+                        </span>
+                        <button id="logoutBtn" class="flex items-center gap-2 px-4 py-2 text-sm text-muted hover:text-foreground transition-colors rounded-md hover:bg-secondary">
+                            <i data-lucide="log-out" class="w-4 h-4"></i>
+                            <span id="logoutBtnText">Log Out</span>
+                        </button>
+                    </div>
+                </div>
+            </header>
+
+            <nav class="border-b border-border bg-card/30">
+                <div class="container mx-auto px-6">
+                    <div class="flex gap-1">
+                        <button class="tab-btn px-6 py-3 text-sm font-medium capitalize transition-colors relative text-muted hover:text-foreground tab-active" data-tab="dashboard">
+                            Dashboard
+                        </button>
+                        <button class="tab-btn px-6 py-3 text-sm font-medium capitalize transition-colors relative text-muted hover:text-foreground" data-tab="patients">
+                            Patients
+                        </button>
+                        <button class="tab-btn px-6 py-3 text-sm font-medium capitalize transition-colors relative text-muted hover:text-foreground" data-tab="resources">
+                            Resources
+                        </button>
+                        <button class="tab-btn px-6 py-3 text-sm font-medium capitalize transition-colors relative text-muted hover:text-foreground" data-tab="training">
+                            Training
+                        </button>
+                    </div>
+                </div>
+            </nav>
+
+            <main class="container mx-auto px-6 py-8">
+                <div id="readOnlyNotice" class="hidden mb-6 p-4 bg-blue-500/10 border border-blue-500/20 rounded-lg">
+                    <div class="flex items-center gap-3">
+                        <i data-lucide="info" class="w-5 h-5 text-blue-500"></i>
+                        <div>
+                            <h3 class="text-sm font-semibold text-blue-500">Viewing Mode</h3>
+                            <p class="text-xs text-muted mt-1">You are viewing the dashboard in read-only mode. To input or edit data, please sign in as a healthcare worker.</p>
+                        </div>
+                    </div>
+                </div>
+    
+                <div id="dashboard" class="tab-content active">
+                    <div class="space-y-8">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div class="bg-card border border-border rounded-lg p-6 hover:border-primary/50 transition-colors">
+                                <div class="flex items-center justify-between mb-4">
+                                    <div>
+                                        <h3 class="text-sm font-medium text-muted uppercase tracking-wide">Total Patients</h3>
+                                        <div class="flex items-center gap-2 mt-2">
+                                            <div class="text-3xl font-bold text-foreground" id="totalPatientsCount">0</div>
+                                            <span class="px-2 py-1 text-xs rounded-full bg-green-500/10 text-green-500 border border-green-500/20">Active</span>
+                                        </div>
+                                    </div>
+                                    <div class="w-12 h-12 rounded-full bg-blue-500/10 flex items-center justify-center">
+                                        <i data-lucide="users" class="w-6 h-6 text-blue-500"></i>
+                                    </div>
+                                </div>
+                                <div class="h-48 mt-4">
+                                    <canvas id="patientsChart"></canvas>
+                                </div>
+                                <div class="mt-4 pt-4 border-t border-border">
+                                    <p class="text-sm text-green-500 flex items-center gap-1">
+                                        <i data-lucide="trending-up" class="w-4 h-4"></i>
+                                        <span id="totalPatientsStatus">Awaiting input</span>
+                                    </p>
+                                    <div class="mt-2 text-xs text-muted" id="totalPatientsAvg">Daily Avg: 0 patients</div>
+                                </div>
+                            </div>
+
+                            <div class="bg-card border border-border rounded-lg p-6 hover:border-primary/50 transition-colors">
+                                <div class="flex items-center justify-between mb-4">
+                                    <div>
+                                        <h3 class="text-sm font-medium text-muted uppercase tracking-wide">Critical Cases</h3>
+                                        <div class="flex items-center gap-2 mt-2">
+                                            <div class="text-3xl font-bold text-foreground" id="criticalCasesCount">0</div>
+                                            <span class="px-2 py-1 text-xs rounded-full bg-yellow-500/10 text-yellow-500 border border-yellow-500/20">Monitor</span>
+                                        </div>
+                                    </div>
+                                    <div class="w-12 h-12 rounded-full bg-red-500/10 flex items-center justify-center">
+                                        <i data-lucide="activity" class="w-6 h-6 text-red-500"></i>
+                                    </div>
+                                </div>
+                                <div class="h-48 mt-4">
+                                    <canvas id="criticalChart"></canvas>
+                                </div>
+                                <div class="mt-4 pt-4 border-t border-border">
+                                    <p class="text-sm text-red-500 flex items-center gap-1">
+                                        <i data-lucide="trending-up" class="w-4 h-4"></i>
+                                        <span id="criticalCasesStatus">Awaiting input</span>
+                                    </p>
+                                    <div class="mt-2 text-xs text-muted" id="criticalCasesCapacity">ICU Capacity: 0%</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        
+
+                        <!-- Resource Stock Monitoring -->
+                        <div class="bg-card border border-border rounded-lg p-6">
+                            <h2 class="text-xl font-semibold text-foreground mb-6">Resource Stock Monitoring</h2>
+                            
+                            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                                <div class="bg-gradient-to-br from-green-50 to-green-50/50 rounded-lg p-4 border border-border/50">
+                                    <h3 class="text-sm font-semibold text-foreground mb-2 flex items-center gap-2">
+                                        <i data-lucide="check-circle" class="w-4 h-4 text-green-500"></i>
+                                        Healthy Stock
+                                    </h3>
+                                    <div class="text-2xl font-bold text-green-600" id="healthyStockCount">0</div>
+                                    <p class="text-xs text-muted mt-1">Above threshold</p>
+                                </div>
+                                <div class="bg-gradient-to-br from-yellow-50 to-yellow-50/50 rounded-lg p-4 border border-border/50">
+                                    <h3 class="text-sm font-semibold text-foreground mb-2 flex items-center gap-2">
+                                        <i data-lucide="alert-circle" class="w-4 h-4 text-yellow-500"></i>
+                                        Low Stock
+                                    </h3>
+                                    <div class="text-2xl font-bold text-yellow-600" id="lowStockCount">0</div>
+                                    <p class="text-xs text-muted mt-1">Needs attention</p>
+                                </div>
+                                <div class="bg-gradient-to-br from-red-50 to-red-50/50 rounded-lg p-4 border border-border/50">
+                                    <h3 class="text-sm font-semibold text-foreground mb-2 flex items-center gap-2">
+                                        <i data-lucide="alert-triangle" class="w-4 h-4 text-red-500"></i>
+                                        Critical Stock
+                                    </h3>
+                                    <div class="text-2xl font-bold text-red-600" id="criticalStockCount">0</div>
+                                    <p class="text-xs text-muted mt-1">Requires reorder</p>
+                                </div>
+                                <div class="bg-gradient-to-br from-blue-50 to-blue-50/50 rounded-lg p-4 border border-border/50">
+                                    <h3 class="text-sm font-semibold text-foreground mb-2 flex items-center gap-2">
+                                        <i data-lucide="box" class="w-4 h-4 text-blue-500"></i>
+                                        Total Items
+                                    </h3>
+                                    <div class="text-2xl font-bold text-blue-600" id="totalResourceItems">0</div>
+                                    <p class="text-xs text-muted mt-1">Tracked resources</p>
+                                </div>
+                            </div>
+
+                            <div class="overflow-x-auto">
+                                <table class="w-full">
+                                    <thead>
+                                        <tr class="border-b border-border">
+                                            <th class="text-left py-3 px-4 text-sm font-medium text-muted">Resource Name</th>
+                                            <th class="text-left py-3 px-4 text-sm font-medium text-muted">Category</th>
+                                            <th class="text-left py-3 px-4 text-sm font-medium text-muted">Current Stock</th>
+                                            <th class="text-left py-3 px-4 text-sm font-medium text-muted">Threshold</th>
+                                            <th class="text-left py-3 px-4 text-sm font-medium text-muted">Days Remaining</th>
+                                            <th class="text-left py-3 px-4 text-sm font-medium text-muted">Status</th>
+                                            <th class="text-left py-3 px-4 text-sm font-medium text-muted">Utilization %</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="resourceTableBody">
+                                        <tr class="border-b border-border hover:bg-secondary/50 transition-colors">
+                                            <td colspan="7" class="py-8 px-4 text-center text-sm text-muted">No resources added yet. Healthcare workers can add resources in the Resources tab.</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <div id="stockAlertsContainer" class="mt-6 hidden">
+                                <h3 class="text-sm font-semibold text-foreground mb-4 flex items-center gap-2">
+                                    <i data-lucide="bell" class="w-4 h-4 text-primary"></i>
+                                    Critical Alerts
+                                </h3>
+                                <div id="stockAlertsList" class="space-y-3">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bg-card border border-border rounded-lg p-6">
+                            <h2 class="text-xl font-semibold text-foreground mb-6">Resource Availability Trend</h2>
+                            <div class="h-64">
+                                <canvas id="resourceTrendChart"></canvas>
+                            </div>
+                        </div>
+
+                        <div class="bg-card border border-border rounded-lg p-6">
+                            <div class="flex items-center justify-between mb-6">
+                                <h2 class="text-xl font-semibold text-foreground">Disease Map Indicator</h2>
+                                <div class="flex items-center gap-3">
+                                    <span class="text-xs text-muted font-medium">Severity:</span>
+                                    <div class="flex gap-3">
+                                        <div class="flex items-center gap-1.5">
+                                            <div class="w-3 h-3 rounded-full bg-green-500 shadow-sm"></div>
+                                            <span class="text-xs text-muted">Low</span>
+                                        </div>
+                                        <div class="flex items-center gap-1.5">
+                                            <div class="w-3 h-3 rounded-full bg-yellow-500 shadow-sm"></div>
+                                            <span class="text-xs text-muted">Medium</span>
+                                        </div>
+                                        <div class="flex items-center gap-1.5">
+                                            <div class="w-3 h-3 rounded-full bg-red-500 shadow-sm"></div>
+                                            <span class="text-xs text-muted">High</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="relative bg-gradient-to-br from-blue-50 to-blue-50/50 rounded-lg p-6 min-h-96 border border-border/50 overflow-hidden">
+                                <div id="diseaseMapContainer" class="w-full h-96 border border-border/30 rounded-lg bg-white shadow-sm" style="z-index: 1;">
+                                    <div class="map-loading">Loading map...</div>
+                                </div>
+                            </div>
+
+                            <div class="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div class="bg-gradient-to-br from-blue-50 to-blue-50/50 rounded-lg p-4 border border-border/50">
+                                    <h3 class="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
+                                        <i data-lucide="map-pin" class="w-4 h-4 text-primary"></i>
+                                        Top Affected Locations
+                                    </h3>
+                                    <div id="topLocations" class="space-y-2">
+                                        <p class="text-xs text-muted">No data available yet</p>
+                                    </div>
+                                </div>
+                                <div class="bg-gradient-to-br from-red-50 to-red-50/50 rounded-lg p-4 border border-border/50">
+                                    <h3 class="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
+                                        <i data-lucide="virus" class="w-4 h-4 text-primary"></i>
+                                        Disease Distribution
+                                    </h3>
+                                    <div id="diseaseDistribution" class="space-y-2">
+                                        <p class="text-xs text-muted">No data available yet</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Priority Alerts Section -->
+                        <div class="bg-card border border-border rounded-lg p-6">
+                            <div class="flex items-center justify-between mb-6">
+                                <h2 class="text-xl font-semibold text-foreground">Priority Alerts</h2>
+                                <button type="button" id="showAlertFormBtn" class="healthcare-only px-4 py-2 text-sm bg-primary hover:bg-primary/90 text-white rounded-md transition-colors flex items-center gap-2">
+                                    <i data-lucide="plus" class="w-4 h-4"></i>
+                                    Add Alert
+                                </button>
+                            </div>
+
+                            <!-- Alert Form -->
+                            <div id="alertFormContainer" class="healthcare-only hidden mb-6 bg-secondary/30 border border-border rounded-lg p-6">
+                                <h3 class="text-lg font-semibold text-foreground mb-4">New Priority Alert</h3>
+                                <form id="alertForm" class="space-y-4">
+                                    <div class="space-y-2">
+                                        <label class="block text-sm font-medium text-foreground">Alert Title</label>
+                                        <input type="text" id="alertTitle" placeholder="e.g., Medication Stock Low" class="w-full bg-background border border-border text-foreground px-4 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-primary" required />
+                                    </div>
+                                    <div class="space-y-2">
+                                        <label class="block text-sm font-medium text-foreground">Description</label>
+                                        <textarea id="alertDescription" rows="2" placeholder="Provide details about this alert..." class="w-full bg-background border border-border text-foreground px-4 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-primary" required></textarea>
+                                    </div>
+                                    <div class="space-y-2">
+                                        <label class="block text-sm font-medium text-foreground">Priority Level</label>
+                                        <select id="alertPriority" class="w-full bg-background border border-border text-foreground px-4 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-primary" required>
+                                            <option value="high">High - Requires immediate action</option>
+                                            <option value="medium">Medium - Needs attention soon</option>
+                                            <option value="low">Low - General reminder</option>
+                                        </select>
+                                    </div>
+                                    <div class="space-y-2">
+                                        <label class="block text-sm font-medium text-foreground">Action Button Label (Optional)</label>
+                                        <input type="text" id="alertActionLabel" placeholder="e.g., Take Action, Acknowledge" class="w-full bg-background border border-border text-foreground px-4 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-primary" />
+                                    </div>
+                                    <div class="flex items-center gap-3">
+                                        <button type="submit" class="px-6 py-2 bg-primary hover:bg-primary/90 text-white rounded-md transition-colors">
+                                            Add Alert
+                                        </button>
+                                        <button type="button" id="cancelAlertFormBtn" class="px-6 py-2 bg-secondary hover:bg-secondary/80 text-foreground rounded-md transition-colors">
+                                            Cancel
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+
+                            <!-- Alerts List -->
+                            <div id="alertsList" class="space-y-4">
+                                <p class="text-sm text-muted text-center py-8">No priority alerts. Healthcare workers can add new alerts using the button above.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="patients" class="tab-content">
+                    <div class="space-y-8">
+                        <div class="healthcare-only bg-card border border-border rounded-lg p-6">
+                            <h2 class="text-xl font-semibold text-foreground mb-6">Add New Patient</h2>
+                            <form id="patientForm" class="space-y-6">
+                                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                    <div class="space-y-2">
+                                        <label class="block text-sm font-medium text-foreground">Patient Name</label>
+                                        <input type="text" id="patientName" placeholder="Enter full name" class="w-full bg-secondary border border-border text-foreground px-4 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-primary" required />
+                                    </div>
+                                    <div class="space-y-2">
+                                        <label class="block text-sm font-medium text-foreground">Date of Birth</label>
+                                        <input type="date" id="patientDOB" class="w-full bg-secondary border border-border text-foreground px-4 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-primary" required />
+                                    </div>
+                                    <div class="space-y-2">
+                                        <label class="block text-sm font-medium text-foreground">Medical ID</label>
+                                        <input type="text" id="patientID" placeholder="Auto-generated" class="w-full bg-secondary border border-border text-foreground px-4 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-primary" readonly />
+                                    </div>
+                                </div>
+
+                                <!-- Location Picker Section -->
+                                <div class="space-y-4 border-t border-border pt-6">
+                                    <h3 class="text-lg font-semibold text-foreground mb-4">Patient Location</h3>
+                                    
+                                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                        <div class="space-y-2">
+                                            <label class="block text-sm font-medium text-foreground">Region/Province</label>
+                                            <select id="patientRegion" class="w-full bg-secondary border border-border text-foreground px-4 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-primary" required>
+                                                <option value="">Select region</option>
+                                                <option value="Metro Manila">Metro Manila</option>
+                                                <option value="Cavite">Cavite</option>
+                                                <option value="Laguna">Laguna</option>
+                                                <option value="Bulacan">Bulacan</option>
+                                                <option value="Rizal">Rizal</option>
+                                                <option value="Batangas">Batangas</option>
+                                            </select>
+                                        </div>
+                                        <div class="space-y-2">
+                                            <label class="block text-sm font-medium text-foreground">City/Municipality</label>
+                                            <select id="patientCity" class="w-full bg-secondary border border-border text-foreground px-4 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-primary" required>
+                                                <option value="">Select city first</option>
+                                            </select>
+                                        </div>
+                                        <div class="space-y-2">
+                                            <label class="block text-sm font-medium text-foreground">Barangay</label>
+                                            <select id="patientBarangay" class="w-full bg-secondary border border-border text-foreground px-4 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-primary" required>
+                                                <option value="">Select barangay</option>
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <div class="space-y-2">
+                                        <label class="block text-sm font-medium text-foreground">
+                                            Street Address / Additional Location Details
+                                        </label>
+                                        <input type="text" id="patientStreet" placeholder="e.g., 123 Main Street, Building A" class="w-full bg-secondary border border-border text-foreground px-4 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-primary" />
+                                    </div>
+
+                                    <div class="space-y-2">
+                                        <label class="block text-sm font-medium text-foreground mb-2">
+                                            Pin Exact Location on Map (Optional)
+                                        </label>
+                                        <div id="locationPickerMap"></div>
+                                        <p class="text-xs text-muted mt-2">Click on the map to set the exact location. The map will center on the selected city/barangay.</p>
+                                        <div id="selectedCoordinates" class="hidden mt-2 p-3 bg-secondary/50 rounded-lg">
+                                            <p class="text-xs text-foreground">
+                                                <span class="font-medium">Selected coordinates:</span> 
+                                                <span id="coordsDisplay"></span>
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <input type="hidden" id="patientLat" />
+                                    <input type="hidden" id="patientLng" />
+                                    <input type="hidden" id="patientFullLocation" />
+                                </div>
+
+                                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 border-t border-border pt-6">
+                                    <div class="space-y-2">
+                                        <label class="block text-sm font-medium text-foreground">Primary Condition/Disease</label>
+                                        <select id="patientCondition" class="w-full bg-secondary border border-border text-foreground px-4 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-primary" required>
+                                            <option value="">Select condition</option>
+                                            <option>Dengue Fever</option>
+                                            <option>Influenza Type A</option>
+                                            <option>Tuberculosis</option>
+                                            <option>Hypertension</option>
+                                            <option>COVID-19</option>
+                                            <option>Diabetes</option>
+                                            <option>Heart Disease</option>
+                                            <option>Respiratory Disease</option>
+                                            <option>Other</option>
+                                        </select>
+                                    </div>
+                                    <div class="space-y-2">
+                                        <label class="block text-sm font-medium text-foreground">Severity Level</label>
+                                        <select id="patientSeverity" class="w-full bg-secondary border border-border text-foreground px-4 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-primary" required>
+                                            <option value="">Select severity</option>
+                                            <option value="Low">Low - Mild symptoms</option>
+                                            <option value="Medium">Medium - Moderate symptoms</option>
+                                            <option value="High">High - Critical condition</option>
+                                        </select>
+                                    </div>
+                                    <div class="space-y-2">
+                                        <label class="block text-sm font-medium text-foreground">Emergency Contact</label>
+                                        <input type="tel" id="patientContact" placeholder="Phone number" class="w-full bg-secondary border border-border text-foreground px-4 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-primary" required />
+                                    </div>
+                                    <div class="space-y-2">
+                                        <label class="block text-sm font-medium text-foreground">Insurance Provider</label>
+                                        <input type="text" id="patientInsurance" placeholder="Insurance company" class="w-full bg-secondary border border-border text-foreground px-4 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-primary" />
+                                    </div>
+                                    <div class="space-y-2">
+                                        <label class="block text-sm font-medium text-foreground">Admission Date</label>
+                                        <input type="date" id="patientAdmission" class="w-full bg-secondary border border-border text-foreground px-4 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-primary" required />
+                                    </div>
+                                </div>
+                                
+                                <div class="space-y-2">
+                                    <label class="block text-sm font-medium text-foreground">Symptoms/Notes</label>
+                                    <textarea id="patientNotes" rows="3" placeholder="Describe symptoms and any additional information..." class="w-full bg-secondary border border-border text-foreground px-4 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"></textarea>
+                                </div>
+
+                                <div class="flex items-center gap-3">
+                                    <input type="checkbox" id="updateDiseaseTracking" class="w-4 h-4 rounded border-border text-primary focus:ring-primary" checked />
+                                    <label for="updateDiseaseTracking" class="text-sm text-foreground">
+                                        Automatically update Disease Tracking data for this location and condition
+                                    </label>
+                                </div>
+                                
+                                <button type="submit" class="px-6 py-2 bg-primary hover:bg-primary/90 text-white rounded-md transition-colors">
+                                    Add Patient
+                                </button>
+                            </form>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div class="bg-card border border-border rounded-lg p-6">
+                                <h3 class="text-sm text-muted mb-4">New Patients Today</h3>
+                                <div class="text-3xl font-bold text-foreground" id="newPatientsToday">0</div>
+                                <p class="text-sm text-green-500 flex items-center gap-1 mt-2">
+                                    <i data-lucide="trending-up" class="w-4 h-4"></i>
+                                    <span id="newPatientsTodayStatus">Awaiting input</span>
+                                </p>
+                            </div>
+                            <div class="bg-card border border-border rounded-lg p-6">
+                                <h3 class="text-sm text-muted mb-4">Pending Updates</h3>
+                                <div class="text-3xl font-bold text-foreground" id="pendingUpdates">0</div>
+                                <p class="text-sm text-muted mt-2">Records in queue</p>
+                            </div>
+                        </div>
+
+                        <div class="bg-card border border-border rounded-lg p-6">
+                            <h2 class="text-xl font-semibold text-foreground mb-6">Recent Patient Admissions</h2>
+                            <div class="overflow-x-auto">
+                                <table class="w-full">
+                                    <thead>
+                                        <tr class="border-b border-border">
+                                            <th class="text-left py-3 px-4 text-sm font-medium text-muted">Patient ID</th>
+                                            <th class="text-left py-3 px-4 text-sm font-medium text-muted">Name</th>
+                                            <th class="text-left py-3 px-4 text-sm font-medium text-muted">Location</th>
+                                            <th class="text-left py-3 px-4 text-sm font-medium text-muted">Condition</th>
+                                            <th class="text-left py-3 px-4 text-sm font-medium text-muted">Severity</th>
+                                            <th class="text-left py-3 px-4 text-sm font-medium text-muted">Admission Date</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="patientTableBody">
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="resources" class="tab-content">
+                    <div class="space-y-8">
+                        <div class="healthcare-only bg-card border border-border rounded-lg p-6">
+                            <h2 class="text-xl font-semibold text-foreground mb-6">Add New Resource</h2>
+                            <form id="resourceForm" class="space-y-6">
+                                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                    <div class="space-y-2">
+                                        <label class="block text-sm font-medium text-foreground">Resource Name</label>
+                                        <input type="text" id="resourceName" placeholder="e.g., Insulin, Face Masks" class="w-full bg-secondary border border-border text-foreground px-4 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-primary" required />
+                                    </div>
+                                    <div class="space-y-2">
+                                        <label class="block text-sm font-medium text-foreground">Category</label>
+                                        <select id="resourceCategory" class="w-full bg-secondary border border-border text-foreground px-4 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-primary" required>
+                                            <option value="">Select category</option>
+                                            <option>Medication</option>
+                                            <option>Medical Supplies</option>
+                                            <option>Equipment</option>
+                                            <option>PPE</option>
+                                            <option>Laboratory</option>
+                                            <option>Emergency</option>
+                                        </select>
+                                    </div>
+                                    <div class="space-y-2">
+                                        <label class="block text-sm font-medium text-foreground">Current Stock</label>
+                                        <input type="number" id="resourceStock" placeholder="Quantity" min="0" class="w-full bg-secondary border border-border text-foreground px-4 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-primary" required />
+                                    </div>
+                                    <div class="space-y-2">
+                                        <label class="block text-sm font-medium text-foreground">Unit</label>
+                                        <input type="text" id="resourceUnit" placeholder="e.g., boxes, bottles, pieces" class="w-full bg-secondary border border-border text-foreground px-4 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-primary" required />
+                                    </div>
+                                    <div class="space-y-2">
+                                        <label class="block text-sm font-medium text-foreground">Minimum Threshold</label>
+                                        <input type="number" id="resourceThreshold" placeholder="Alert level" min="0" class="w-full bg-secondary border border-border text-foreground px-4 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-primary" required />
+                                    </div>
+                                    <div class="space-y-2">
+                                        <label class="block text-sm font-medium text-foreground">Daily Usage Rate</label>
+                                        <input type="number" id="resourceUsageRate" placeholder="Units per day" min="0" step="0.1" class="w-full bg-secondary border border-border text-foreground px-4 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-primary" required />
+                                    </div>
+                                </div>
+                                
+                                <button type="submit" class="px-6 py-2 bg-primary hover:bg-primary/90 text-white rounded-md transition-colors">
+                                    Add Resource
+                                </button>
+                            </form>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+                            <div class="bg-card border border-border rounded-lg p-6">
+                                <h3 class="text-sm text-muted mb-4">Total Resources</h3>
+                                <div class="text-3xl font-bold text-foreground" id="totalResourcesCount">0</div>
+                                <p class="text-sm text-muted mt-2">Items monitored</p>
+                            </div>
+                            <div class="bg-card border border-border rounded-lg p-6">
+                                <h3 class="text-sm text-muted mb-4">Low Stock Items</h3>
+                                <div class="text-3xl font-bold text-foreground" id="lowStockCount2">0</div>
+                                <p class="text-sm text-red-500 flex items-center gap-1 mt-2">
+                                    <i data-lucide="alert-circle" class="w-4 h-4"></i>
+                                    <span id="lowStockStatus">Needs attention</span>
+                                </p>
+                            </div>
+                            <div class="bg-card border border-border rounded-lg p-6">
+                                <h3 class="text-sm text-muted mb-4">Monthly Budget</h3>
+                                <div class="text-3xl font-bold text-foreground" id="monthlyBudget">₱0</div>
+                                <p class="text-sm text-muted mt-2" id="budgetRemaining">₱0 remaining</p>
+                            </div>
+                            <div class="bg-card border border-border rounded-lg p-6">
+                                <h3 class="text-sm text-muted mb-4">Avg. Restock Time</h3>
+                                <div class="text-3xl font-bold text-foreground" id="avgRestockTime">0</div>
+                                <p class="text-sm text-muted mt-2">Days average</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="training" class="tab-content">
+                    <div class="space-y-8">
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <div class="bg-card border border-border rounded-lg p-6">
+                                <h3 class="text-sm text-muted mb-4">Available Modules</h3>
+                                <div class="text-3xl font-bold text-foreground" id="availableModulesCount">0</div>
+                                <p class="text-sm text-muted mt-2">Online training resources</p>
+                            </div>
+                            <div class="bg-card border border-border rounded-lg p-6">
+                                <h3 class="text-sm text-muted mb-4">Free Resources</h3>
+                                <div class="text-3xl font-bold text-foreground" id="freeResourcesCount">0</div>
+                                <p class="text-sm text-green-500 flex items-center gap-1 mt-2">
+                                    <i data-lucide="check-circle" class="w-4 h-4"></i>
+                                    No cost access
+                                </p>
+                            </div>
+                            <div class="bg-card border border-border rounded-lg p-6">
+                                <h3 class="text-sm text-muted mb-4">With Certificates</h3>
+                                <div class="text-3xl font-bold text-foreground" id="certificatesCount">0</div>
+                                <p class="text-sm text-muted mt-2">Certificate available</p>
+                            </div>
+                        </div>
+
+                        <div class="bg-card border border-border rounded-lg p-6">
+                            <div class="flex items-center justify-between mb-6">
+                                <div>
+                                    <h2 class="text-xl font-semibold text-foreground">Healthcare Training Modules</h2>
+                                    <p class="text-sm text-muted mt-1">Curated online resources for healthcare professionals</p>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <select id="moduleFilter" class="bg-secondary border border-border text-foreground px-3 py-2 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary">
+                                        <option value="all">All Categories</option>
+                                        <option value="clinical">Clinical Skills</option>
+                                        <option value="safety">Patient Safety</option>
+                                        <option value="emergency">Emergency Care</option>
+                                        <option value="communication">Communication</option>
+                                        <option value="management">Healthcare Management</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div id="trainingModulesGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </main>
+        </div>
+
+        <script>
+            let resourcesData = [];
+            let patientsData = [];
+            let diseaseData = [];
+            let alertsData = [];
+            let chartsMap = {};
+            let diseaseMap = null;
+            let locationPickerMap = null;
+            let locationMarker = null;
+            let heatmapLayer = null;
+            let markerClusterGroup = null;
+            let isProcessingPatient = false;
+            let patientQueue = [];
+            let processedCount = 0;
+
+            const trainingModules = [
+                {
+                    id: 1,
+                    title: 'WHO COVID-19 Clinical Management',
+                    provider: 'World Health Organization',
+                    category: 'clinical',
+                    level: 'intermediate',
+                    duration: '4-6 hours',
+                    description: 'Comprehensive guide to clinical management of COVID-19 patients, including diagnosis, treatment protocols, and monitoring.',
+                    url: 'https://www.who.int/publications/i/item/WHO-2019-nCoV-clinical-2021-2',
+                    isFree: true,
+                    hasCertificate: false,
+                    tags: ['COVID-19', 'Clinical Care', 'Treatment']
+                },
+                {
+                    id: 2,
+                    title: 'Basic Life Support (BLS)',
+                    provider: 'American Heart Association',
+                    category: 'emergency',
+                    level: 'beginner',
+                    duration: '2-3 hours',
+                    description: 'Learn essential CPR skills, use of AED, and relief of choking in adults, children, and infants.',
+                    url: 'https://cpr.heart.org/en/courses/basic-life-support-bls-training',
+                    isFree: false,
+                    hasCertificate: true,
+                    tags: ['CPR', 'Emergency', 'Life Support']
+                },
+                {
+                    id: 3,
+                    title: 'Infection Prevention and Control',
+                    provider: 'CDC',
+                    category: 'safety',
+                    level: 'intermediate',
+                    duration: '3-4 hours',
+                    description: 'Evidence-based strategies for preventing healthcare-associated infections and implementing control measures.',
+                    url: 'https://www.cdc.gov/infection-control',
+                    isFree: true,
+                    hasCertificate: false,
+                    tags: ['Infection Control', 'Safety', 'Prevention']
+                },
+                {
+                    id: 4,
+                    title: 'Patient Safety Fundamentals',
+                    provider: 'Institute for Healthcare Improvement',
+                    category: 'safety',
+                    level: 'beginner',
+                    duration: '2 hours',
+                    description: 'Introduction to patient safety principles, error prevention, and creating a culture of safety.',
+                    url: 'https://www.ihi.org/education/InPersonTraining/patient-safety',
+                    isFree: true,
+                    hasCertificate: true,
+                    tags: ['Patient Safety', 'Quality', 'Healthcare']
+                },
+                {
+                    id: 5,
+                    title: 'Advanced Cardiac Life Support (ACLS)',
+                    provider: 'American Heart Association',
+                    category: 'emergency',
+                    level: 'advanced',
+                    duration: '8-10 hours',
+                    description: 'Advanced cardiovascular emergency care including cardiac arrest, stroke, and acute coronary syndromes.',
+                    url: 'https://cpr.heart.org/en/courses/acls',
+                    isFree: false,
+                    hasCertificate: true,
+                    tags: ['ACLS', 'Emergency', 'Cardiac']
+                },
+                {
+                    id: 6,
+                    title: 'Pediatric Advanced Life Support (PALS)',
+                    provider: 'American Heart Association',
+                    category: 'emergency',
+                    level: 'advanced',
+                    duration: '7-9 hours',
+                    description: 'Systematic approach to pediatric assessment, basic life support, PALS algorithms, and effective resuscitation.',
+                    url: 'https://cpr.heart.org/en/courses/pals',
+                    isFree: false,
+                    hasCertificate: true,
+                    tags: ['PALS', 'Pediatrics', 'Emergency']
+                },
+                {
+                    id: 7,
+                    title: 'Wound Care Management',
+                    provider: 'Wound Care Education Institute',
+                    category: 'clinical',
+                    level: 'intermediate',
+                    duration: '4-5 hours',
+                    description: 'Comprehensive wound assessment, treatment options, and evidence-based wound care practices.',
+                    url: 'https://wcei.net',
+                    isFree: true,
+                    hasCertificate: true,
+                    tags: ['Wound Care', 'Clinical', 'Treatment']
+                },
+                {
+                    id: 8,
+                    title: 'Medication Administration Safety',
+                    provider: 'Institute for Safe Medication Practices',
+                    category: 'safety',
+                    level: 'beginner',
+                    duration: '2-3 hours',
+                    description: 'Best practices for safe medication administration and error prevention strategies.',
+                    url: 'https://www.ismp.org/resources',
+                    isFree: true,
+                    hasCertificate: false,
+                    tags: ['Medication', 'Safety', 'Administration']
+                },
+                {
+                    id: 9,
+                    title: 'Healthcare Communication Skills',
+                    provider: 'Health Communication Partners',
+                    category: 'communication',
+                    level: 'beginner',
+                    duration: '3 hours',
+                    description: 'Effective communication techniques for patient interactions, family conferences, and team collaboration.',
+                    url: 'https://healthcommunicationpartners.com',
+                    isFree: true,
+                    hasCertificate: true,
+                    tags: ['Communication', 'Patient Care', 'Teamwork']
+                },
+                {
+                    id: 10,
+                    title: 'Critical Care Nursing Essentials',
+                    provider: 'American Association of Critical-Care Nurses',
+                    category: 'clinical',
+                    level: 'advanced',
+                    duration: '6-8 hours',
+                    description: 'Advanced critical care concepts including hemodynamic monitoring, ventilator management, and complex patient care.',
+                    url: 'https://www.aacn.org/education',
+                    isFree: false,
+                    hasCertificate: true,
+                    tags: ['Critical Care', 'ICU', 'Advanced']
+                },
+                {
+                    id: 11,
+                    title: 'Diabetes Management for Healthcare Providers',
+                    provider: 'American Diabetes Association',
+                    category: 'clinical',
+                    level: 'intermediate',
+                    duration: '4 hours',
+                    description: 'Comprehensive diabetes care including diagnosis, treatment plans, medication management, and patient education.',
+                    url: 'https://professional.diabetes.org',
+                    isFree: true,
+                    hasCertificate: true,
+                    tags: ['Diabetes', 'Chronic Disease', 'Management']
+                },
+                {
+                    id: 12,
+                    title: 'Mental Health First Aid',
+                    provider: 'National Council for Mental Wellbeing',
+                    category: 'clinical',
+                    level: 'beginner',
+                    duration: '3-4 hours',
+                    description: 'Recognize and respond to signs of mental illness and substance use disorders in healthcare settings.',
+                    url: 'https://www.mentalhealthfirstaid.org',
+                    isFree: true,
+                    hasCertificate: true,
+                    tags: ['Mental Health', 'Crisis', 'First Aid']
+                },
+                {
+                    id: 13,
+                    title: 'Surgical Asepsis and Sterile Technique',
+                    provider: 'Association of periOperative Registered Nurses',
+                    category: 'clinical',
+                    level: 'intermediate',
+                    duration: '3-4 hours',
+                    description: 'Principles of surgical asepsis, sterile field maintenance, and infection prevention in surgical settings.',
+                    url: 'https://www.aorn.org/education',
+                    isFree: false,
+                    hasCertificate: true,
+                    tags: ['Surgery', 'Sterile Technique', 'Infection Control']
+                },
+                {
+                    id: 14,
+                    title: 'Neonatal Resuscitation Program (NRP)',
+                    provider: 'American Academy of Pediatrics',
+                    category: 'emergency',
+                    level: 'advanced',
+                    duration: '5-6 hours',
+                    description: 'Evidence-based approach to newborn resuscitation and stabilization at birth.',
+                    url: 'https://www.aap.org/nrp',
+                    isFree: false,
+                    hasCertificate: true,
+                    tags: ['Neonatal', 'Resuscitation', 'Pediatrics']
+                },
+                {
+                    id: 15,
+                    title: 'Pain Management Strategies',
+                    provider: 'American Pain Society',
+                    category: 'clinical',
+                    level: 'intermediate',
+                    duration: '4 hours',
+                    description: 'Multimodal pain assessment and management strategies for acute and chronic pain conditions.',
+                    url: 'https://americanpainsociety.org',
+                    isFree: true,
+                    hasCertificate: false,
+                    tags: ['Pain Management', 'Patient Care', 'Treatment']
+                },
+                {
+                    id: 16,
+                    title: 'Healthcare Leadership Fundamentals',
+                    provider: 'Healthcare Leadership Alliance',
+                    category: 'management',
+                    level: 'intermediate',
+                    duration: '5-6 hours',
+                    description: 'Essential leadership skills for healthcare professionals including team management and decision-making.',
+                    url: 'https://healthcareleadershipalliance.org',
+                    isFree: true,
+                    hasCertificate: true,
+                    tags: ['Leadership', 'Management', 'Administration']
+                },
+                {
+                    id: 17,
+                    title: 'Electronic Health Records Training',
+                    provider: 'Office of the National Coordinator for Health IT',
+                    category: 'management',
+                    level: 'beginner',
+                    duration: '2-3 hours',
+                    description: 'Navigate and utilize electronic health record systems efficiently and securely.',
+                    url: 'https://www.healthit.gov/topic/certification-ehrs',
+                    isFree: true,
+                    hasCertificate: false,
+                    tags: ['EHR', 'Technology', 'Documentation']
+                },
+                {
+                    id: 18,
+                    title: 'Trauma Nursing Core Course (TNCC)',
+                    provider: 'Emergency Nurses Association',
+                    category: 'emergency',
+                    level: 'advanced',
+                    duration: '8-12 hours',
+                    description: 'Systematic approach to trauma assessment and evidence-based interventions for trauma patients.',
+                    url: 'https://www.ena.org/education/tncc',
+                    isFree: false,
+                    hasCertificate: true,
+                    tags: ['Trauma', 'Emergency', 'Advanced']
+                },
+                {
+                    id: 19,
+                    title: 'Pharmacology Basics for Nurses',
+                    provider: 'Nursing Pharmacology Education',
+                    category: 'clinical',
+                    level: 'beginner',
+                    duration: '4-5 hours',
+                    description: 'Foundational pharmacology principles, drug classifications, and safe medication practices.',
+                    url: 'https://nursingpharmacology.com',
+                    isFree: true,
+                    hasCertificate: true,
+                    tags: ['Pharmacology', 'Medication', 'Education']
+                },
+                {
+                    id: 20,
+                    title: 'Geriatric Care Essentials',
+                    provider: 'American Geriatrics Society',
+                    category: 'clinical',
+                    level: 'intermediate',
+                    duration: '4 hours',
+                    description: 'Specialized care for elderly patients including age-related conditions and comprehensive assessment.',
+                    url: 'https://www.americangeriatrics.org/education',
+                    isFree: true,
+                    hasCertificate: true,
+                    tags: ['Geriatrics', 'Elderly Care', 'Specialized']
+                },
+                {
+                    id: 21,
+                    title: 'Healthcare Quality Improvement',
+                    provider: 'Institute for Healthcare Improvement',
+                    category: 'management',
+                    level: 'intermediate',
+                    duration: '3-4 hours',
+                    description: 'Quality improvement methodologies including PDSA cycles and data-driven healthcare improvements.',
+                    url: 'https://www.ihi.org/education/IHIOpenSchool',
+                    isFree: true,
+                    hasCertificate: true,
+                    tags: ['Quality', 'Improvement', 'Management']
+                },
+                {
+                    id: 22,
+                    title: 'Cultural Competence in Healthcare',
+                    provider: 'National Center for Cultural Competence',
+                    category: 'communication',
+                    level: 'beginner',
+                    duration: '2-3 hours',
+                    description: 'Culturally responsive care practices and strategies for diverse patient populations.',
+                    url: 'https://nccc.georgetown.edu',
+                    isFree: true,
+                    hasCertificate: false,
+                    tags: ['Cultural Competence', 'Diversity', 'Patient Care']
+                },
+                {
+                    id: 23,
+                    title: 'Sepsis Recognition and Management',
+                    provider: 'Sepsis Alliance',
+                    category: 'clinical',
+                    level: 'intermediate',
+                    duration: '3 hours',
+                    description: 'Early recognition, assessment, and evidence-based management of sepsis and septic shock.',
+                    url: 'https://www.sepsis.org/education',
+                    isFree: true,
+                    hasCertificate: false,
+                    tags: ['Sepsis', 'Critical Care', 'Emergency']
+                },
+                {
+                    id: 24,
+                    title: 'Oncology Nursing Certification Prep',
+                    provider: 'Oncology Nursing Society',
+                    category: 'clinical',
+                    level: 'advanced',
+                    duration: '10-15 hours',
+                    description: 'Comprehensive preparation for oncology nursing certification including cancer treatments and symptom management.',
+                    url: 'https://www.ons.org/certification',
+                    isFree: false,
+                    hasCertificate: true,
+                    tags: ['Oncology', 'Cancer', 'Certification']
+                },
+                {
+                    id: 25,
+                    title: 'Healthcare Ethics and Legal Issues',
+                    provider: 'American Nurses Association',
+                    category: 'management',
+                    level: 'intermediate',
+                    duration: '3-4 hours',
+                    description: 'Ethical decision-making, patient rights, legal responsibilities, and professional boundaries.',
+                    url: 'https://www.nursingworld.org/education',
+                    isFree: true,
+                    hasCertificate: false,
+                    tags: ['Ethics', 'Legal', 'Professional']
+                }
+            ];
+
+            const philippineLocations = {
+                'Metro Manila': {
+                    coords: [14.5995, 120.9842],
+                    cities: {
+                        'Quezon City': {
+                            coords: [14.6349, 121.0388],
+                            barangays: ['Commonwealth', 'Batasan Hills', 'Holy Spirit', 'Fairview', 'Novaliches Proper']
+                        },
+                        'Manila': {
+                            coords: [14.5995, 120.9842],
+                            barangays: ['Ermita', 'Malate', 'Paco', 'Pandacan', 'Santa Cruz']
+                        },
+                        'Makati': {
+                            coords: [14.5549, 121.0193],
+                            barangays: ['Poblacion', 'Bel-Air', 'San Lorenzo', 'Urdaneta', 'Valenzuela']
+                        }
+                    }
+                },
+                'Cavite': {
+                    coords: [14.4791, 120.8970],
+                    cities: {
+                        'Bacoor': {
+                            coords: [14.4593, 120.9459],
+                            barangays: ['Alima', 'Aniban', 'Habay', 'Mambog', 'Molino']
+                        },
+                        'Dasmariñas': {
+                            coords: [14.3294, 120.9367],
+                            barangays: ['Burol', 'Salawag', 'Paliparan', 'Emilio Aguinaldo', 'San Jose', 'Santa Cruz', 'Sampaloc']
+                        },
+                        'Imus': {
+                            coords: [14.4297, 120.9386],
+                            barangays: ['Alapan', 'Anabu', 'Bayan Luma', 'Bukandala', 'Medicion', 'Tanzang Luma']
+                        }
+                    }
+                },
+                'Laguna': {
+                    coords: [14.1686, 121.3244],
+                    cities: {
+                        'San Pedro': {
+                            coords: [14.3576, 121.0450],
+                            barangays: ['United Bayanihan', 'San Lorenzo Ruiz', 'San Roque', 'Santo Niño', 'Langgam', 'G.S.I.S.', 'Calendola', 'Poblacion']
+                        },
+                        'Biñan': {
+                            coords: [14.3416, 121.0851],
+                            barangays: ['Bungahan', 'Canlalay', 'Casile', 'De La Paz', 'Ganado', 'Langkiwa', 'Poblacion', 'San Antonio', 'San Francisco', 'San Vicente']
+                        },
+                        'Calamba': {
+                            coords: [14.2299, 121.1689],
+                            barangays: ['Maitim', 'Masaya', 'Paciano Rizal', 'Palo-Alto', 'Pansol', 'Parian', 'Prinza', 'Real', 'San Cristobal', 'San Jose', 'San Juan']
+                        }
+                    }
+                },
+                'Bulacan': {
+                    coords: [14.7928, 120.9783],
+                    cities: {
+                        'Malolos': {
+                            coords: [14.8441, 120.8116],
+                            barangays: ['Bagna', 'Balayong', 'Bulihan', 'Caingin', 'Calero', 'Canalate']
+                        },
+                        'Meycauayan': {
+                            coords: [14.7362, 120.9595],
+                            barangays: ['Bahay Pare', 'Bancal', 'Langka', 'Lawa', 'Pajo', 'Poblacion']
+                        },
+                        'San Jose del Monte': {
+                            coords: [14.8136, 121.0456],
+                            barangays: ['Assumption', 'Citrus', 'Dulong Bayan', 'Fatima', 'Gaya-gaya', 'Graceville', 'Kaypian', 'Muzon']
+                        }
+                    }
+                },
+                'Rizal': {
+                    coords: [14.6760, 121.3890],
+                    cities: {
+                        'Antipolo': {
+                            coords: [14.5846, 121.1761],
+                            barangays: ['Bagong Nayon', 'Cupang', 'Dalig', 'Mayamot', 'San Isidro', 'San Jose']
+                        },
+                        'Cainta': {
+                            coords: [14.5786, 121.1242],
+                            barangays: ['San Andres', 'Sto. Niño', 'San Roque', 'San Juan']
+                        },
+                        'Taytay': {
+                            coords: [14.5586, 121.1361],
+                            barangays: ['Dolores', 'San Juan', 'Santa Ana', 'San Isidro']
+                        }
+                    }
+                },
+                'Batangas': {
+                    coords: [13.7567, 121.0589],
+                    cities: {
+                        'Batangas City': {
+                            coords: [13.7599, 121.0570],
+                            barangays: ['Alangilan', 'Balagtas', 'Bolo', 'Concepcion', 'Cuta', 'Gulod Labac', 'Kumintang Ibaba', 'Kumintang Ilaya']
+                        },
+                        'Lipa': {
+                            coords: [13.9411, 121.1636],
+                            barangays: ['Anilao', 'Antipolo del Norte', 'Antipolo del Sur', 'Balintawak', 'Bolbok', 'Bulaklakan']
+                        },
+                        'Tanauan': {
+                            coords: [14.0838, 121.1496],
+                            barangays: ['Altura Bata', 'Altura Matanda', 'Altura Sampaloc', 'Bañadero', 'Bagumbayan']
+                        }
+                    }
+                }
+            };
+
+
+                    function updateTrainingMetrics() {
+                const totalModules = trainingModules.length;
+                const freeModules = trainingModules.filter(m => m.isFree).length;
+                const certificateModules = trainingModules.filter(m => m.hasCertificate).length;
+
+                document.getElementById('availableModulesCount').textContent = totalModules;
+                document.getElementById('freeResourcesCount').textContent = freeModules;
+                document.getElementById('certificatesCount').textContent = certificateModules;
+            }
+
+            function renderTrainingModules(filter = 'all') {
+                updateTrainingMetrics();
+                const grid = document.getElementById('trainingModulesGrid');
+                const filteredModules = filter === 'all' 
+                    ? trainingModules 
+                    : trainingModules.filter(m => m.category === filter);
+
+                if (filteredModules.length === 0) {
+                    grid.innerHTML = '<p class="col-span-full text-center text-muted py-8">No modules found for this category.</p>';
+                    return;
+                }
+
+                grid.innerHTML = filteredModules.map(module => {
+                    const levelClass = module.level === 'beginner' ? 'badge-beginner' : 
+                                    module.level === 'intermediate' ? 'badge-intermediate' : 'badge-advanced';
+                    
+                    return `
+                        <div class="module-card bg-white border border-border rounded-lg overflow-hidden" onclick="window.open('${module.url}', '_blank')">
+                            <div class="p-5">
+                                <div class="flex items-start justify-between mb-3">
+                                    <div class="flex-1">
+                                        <h3 class="font-semibold text-foreground text-base mb-1">${module.title}</h3>
+                                        <p class="text-xs text-muted">${module.provider}</p>
+                                    </div>
+                                </div>
+                                
+                                <p class="text-sm text-muted mb-4 line-clamp-2">${module.description}</p>
+                                
+                                <div class="flex flex-wrap gap-1.5 mb-4">
+                                    ${module.tags.slice(0, 2).map(tag => `
+                                        <span class="text-xs px-2 py-0.5 bg-secondary text-muted rounded">${tag}</span>
+                                    `).join('')}
+                                </div>
+                                
+                                <div class="flex items-center justify-between mb-4 pb-4 border-b border-border">
+                                    <div class="flex items-center gap-2 text-xs text-muted">
+                                        <i data-lucide="clock" class="w-3.5 h-3.5"></i>
+                                        <span>${module.duration}</span>
+                                    </div>
+                                    <span class="badge ${levelClass}">${module.level}</span>
+                                </div>
+                                
+                                <div class="flex items-center justify-between">
+                                    <div class="flex gap-2">
+                                        ${module.isFree ? '<span class="badge badge-free">Free</span>' : '<span class="badge" style="background-color: #6366f120; color: #6366f1; border: 1px solid #6366f140;">Paid</span>'}
+                                        ${module.hasCertificate ? '<span class="badge badge-certificate">Certificate</span>' : ''}
+                                    </div>
+                                    <button class="flex items-center gap-1 text-sm text-primary hover:text-primary/80 transition-colors font-medium">
+                                        <span>View</span>
+                                        <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+                lucide.createIcons();
+            }
+
+
+            // Auto-dismiss alerts after 24 hours
+            function checkAndDismissExpiredAlerts() {
+                const now = new Date().getTime();
+                const twentyFourHoursInMs = 24 * 60 * 60 * 1000;
+
+                const originalCount = alertsData.length;
+                alertsData = alertsData.filter(alert => {
+                    const alertTime = new Date(alert.timestamp).getTime();
+                    const timeElapsed = now - alertTime;
+                    return timeElapsed < twentyFourHoursInMs;
+                });
+
+                if (alertsData.length !== originalCount) {
+                    renderAlerts();
+                    console.log(`Auto-dismissed ${originalCount - alertsData.length} expired alert(s)`);
+                }
+            }
+
+            function renderAlerts() {
+                const alertsList = document.getElementById('alertsList');
+                const isHealthcareWorker = checkHealthcareWorkerStatus();
+                
+                if (alertsData.length === 0) {
+                    alertsList.innerHTML = `<p class="text-sm text-muted text-center py-8">No priority alerts. Healthcare workers can add new alerts using the button above.</p>`;
+                    return;
+                }
+
+                alertsList.innerHTML = alertsData.map(alert => {
+                    const priorityColors = {
+                    high: { bg: 'bg-red-500/10', border: 'border-red-500', text: 'text-red-500', icon: 'alert-triangle' },
+                    medium: { bg: 'bg-yellow-500/10', border: 'border-yellow-500', text: 'text-yellow-500', icon: 'alert-circle' },
+                    low: { bg: 'bg-blue-500/10', border: 'border-blue-500', text: 'text-blue-500', icon: 'info' }
+                    };
+                    
+                    const colors = priorityColors[alert.priority];
+                    const actionLabel = alert.actionLabel || 'Take Action';
+                    
+                    // Conditionally render dismiss button only for healthcare workers
+                    const dismissButton = isHealthcareWorker 
+                    ? `<button onclick="dismissAlert('${alert.id}')" 
+                        class="p-2 text-muted hover:text-foreground transition-colors" 
+                        title="Dismiss alert">
+                        <i data-lucide="x" class="w-4 h-4"></i>
+                        </button>`
+                    : '';
+
+                    return `
+                    <div class="alert-item flex items-start justify-between p-4 ${colors.bg} rounded-lg border-l-4 ${colors.border}">
+                        <div class="flex items-start gap-3 flex-1">
+                        <i data-lucide="${colors.icon}" class="w-5 h-5 ${colors.text} flex-shrink-0 mt-0.5"></i>
+                        <div class="flex-1">
+                            <h4 class="font-semibold text-foreground mb-1">${alert.title}</h4>
+                            <p class="text-sm text-muted mb-2">${alert.description}</p>
+                            <div class="flex items-center gap-3 text-xs text-muted">
+                            <span class="uppercase font-medium ${colors.text}">${alert.priority} Priority</span>
+                            <span>•</span>
+                            <span>${new Date(alert.timestamp).toLocaleString()}</span>
+                            </div>
+                        </div>
+                        </div>
+                        <div class="flex items-center gap-2 ml-4">
+                        <button onclick="handleAlertAction('${alert.id}')" 
+                            class="px-4 py-2 text-sm bg-primary hover:bg-primary/90 text-white rounded-md transition-colors whitespace-nowrap">
+                            ${actionLabel}
+                        </button>
+                        ${dismissButton}
+                        </div>
+                    </div>
+                    `;
+                }).join('');
+                
+                lucide.createIcons();
+                }
+
+
+            function handleAlertAction(alertId) {
+                const alert = alertsData.find(a => a.id === alertId);
+                if (alert) {
+                    alert(`Action taken for: ${alert.title}`);
+                }
+            }
+
+            function dismissAlert(alertId) {
+                // Check if user is a healthcare worker
+                const isHealthcareWorker = checkHealthcareWorkerStatus();
+                
+                if (!isHealthcareWorker) {
+                    alert('Only healthcare workers can dismiss priority alerts.');
+                    return;
+                }
+                
+                // Proceed with dismissing the alert
+                alertsData = alertsData.filter(a => a.id !== alertId);
+                renderAlerts();
+                }
+
+            // Add this helper function to check user role
+                function checkHealthcareWorkerStatus() {
+                    const userRoleBadge = document.getElementById('userRoleBadge');
+                    const roleText = userRoleBadge.textContent.trim();
+                    return roleText === 'Healthcare Worker';
+                    }
+
+            function showView(viewId) {
+                const views = document.querySelectorAll('.view');
+                views.forEach(view => view.classList.remove('active'));
+                document.getElementById(viewId).classList.add('active');
+            }
+
+            function calculateDaysRemaining(currentStock, dailyUsageRate) {
+                if (dailyUsageRate === 0 || !dailyUsageRate) return Math.round(currentStock);
+                return Math.round(currentStock / dailyUsageRate);
+            }
+
+            function getStockStatus(currentStock, threshold) {
+                if (currentStock <= 0) return { status: 'Out of Stock', color: 'text-red-600', bgColor: 'bg-red-500/10', borderColor: 'border-red-500/20' };
+                if (currentStock <= threshold * 0.25) return { status: 'Critical', color: 'text-red-600', bgColor: 'bg-red-500/10', borderColor: 'border-red-500/20' };
+                if (currentStock <= threshold) return { status: 'Low Stock', color: 'text-yellow-600', bgColor: 'bg-yellow-500/10', borderColor: 'border-yellow-500/20' };
+                return { status: 'Healthy', color: 'text-green-600', bgColor: 'bg-green-500/10', borderColor: 'border-green-500/20' };
+            }
+
+            function updateResourceDashboard() {
+                const resourceTableBody = document.getElementById('resourceTableBody');
+                const stockAlertsContainer = document.getElementById('stockAlertsContainer');
+                const stockAlertsList = document.getElementById('stockAlertsList');
+
+                let healthyCount = 0, lowCount = 0, criticalCount = 0;
+                const alerts = [];
+
+                if (resourcesData.length === 0) {
+                    resourceTableBody.innerHTML = `
+                        <tr class="border-b border-border hover:bg-secondary/50 transition-colors">
+                            <td colspan="7" class="py-8 px-4 text-center text-sm text-muted">No resources added yet. Healthcare workers can add resources in the Resources tab.</td>
+                        </tr>
+                    `;
+                    stockAlertsContainer.classList.add('hidden');
+                    document.getElementById('totalResourceItems').textContent = '0';
+                    document.getElementById('healthyStockCount').textContent = '0';
+                    document.getElementById('lowStockCount').textContent = '0';
+                    document.getElementById('criticalStockCount').textContent = '0';
+                    return;
+                }
+
+                resourceTableBody.innerHTML = resourcesData.map(resource => {
+                    const daysRemaining = calculateDaysRemaining(resource.stock, resource.usageRate);
+                    const statusInfo = getStockStatus(resource.stock, resource.threshold);
+                    const utilizationPercent = Math.min(Math.round((resource.stock / (resource.threshold * 4)) * 100), 100);
+
+                    if (statusInfo.status === 'Healthy') healthyCount++;
+                    else if (statusInfo.status === 'Low Stock') {
+                        lowCount++;
+                        alerts.push(`${resource.name} stock level is low (${resource.stock} ${resource.unit})`);
+                    }
+                    else {
+                        criticalCount++;
+                        alerts.push(`${resource.name} is in critical stock - immediate reorder needed!`);
+                    }
+
+                    return `
+                        <tr class="border-b border-border hover:bg-secondary/50 transition-colors">
+                            <td class="py-3 px-4 text-sm text-foreground font-medium">${resource.name}</td>
+                            <td class="py-3 px-4 text-sm text-foreground">${resource.category}</td>
+                            <td class="py-3 px-4 text-sm text-foreground">${resource.stock} ${resource.unit}</td>
+                            <td class="py-3 px-4 text-sm text-foreground">${resource.threshold} ${resource.unit}</td>
+                            <td class="py-3 px-4 text-sm text-foreground">${daysRemaining} days</td>
+                            <td class="py-3 px-4 text-sm">
+                                <span class="px-2 py-1 rounded-full text-xs font-medium ${statusInfo.bgColor} ${statusInfo.color} border ${statusInfo.borderColor}">
+                                    ${statusInfo.status}
+                                </span>
+                            </td>
+                            <td class="py-3 px-4 text-sm">
+                                <div class="flex items-center gap-2">
+                                    <div class="w-16 h-2 bg-secondary rounded-full overflow-hidden">
+                                        <div class="h-full rounded-full" style="width: ${utilizationPercent}%; background-color: ${
+                                            utilizationPercent > 75 ? '#22c55e' : utilizationPercent > 50 ? '#eab308' : '#ef4444'
+                                        };"></div>
+                                    </div>
+                                    <span class="text-xs text-muted">${utilizationPercent}%</span>
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+
+                document.getElementById('totalResourceItems').textContent = resourcesData.length;
+                document.getElementById('healthyStockCount').textContent = healthyCount;
+                document.getElementById('lowStockCount').textContent = lowCount;
+                document.getElementById('criticalStockCount').textContent = criticalCount;
+                document.getElementById('lowStockCount2').textContent = lowCount + criticalCount;
+
+                if (alerts.length > 0) {
+                    stockAlertsContainer.classList.remove('hidden');
+                    stockAlertsList.innerHTML = alerts.map(alert => `
+                        <div class="flex items-start gap-3 p-3 bg-secondary/50 rounded-lg border-l-4 border-primary">
+                            <i data-lucide="alert-circle" class="w-5 h-5 text-primary flex-shrink-0 mt-0.5"></i>
+                            <p class="text-sm text-foreground">${alert}</p>
+                        </div>
+                    `).join('');
+                    lucide.createIcons();
+                } else {
+                    stockAlertsContainer.classList.add('hidden');
+                }
+
+                updateResourceTrendChart();
+            }
+
+            function updateResourceTrendChart() {
+                if (!chartsMap.resourceTrendChart) return;
+                
+                const categories = [...new Set(resourcesData.map(r => r.category))];
+                const categoryData = categories.map(cat => {
+                    const resources = resourcesData.filter(r => r.category === cat);
+                    return resources.reduce((sum, r) => sum + r.stock, 0);
+                });
+
+                chartsMap.resourceTrendChart.data.labels = categories.length > 0 ? categories : ['No Data'];
+                chartsMap.resourceTrendChart.data.datasets[0].data = categoryData.length > 0 ? categoryData : [0];
+                chartsMap.resourceTrendChart.update();
+            }
+
+            function initializeLocationPicker() {
+                if (locationPickerMap) {
+                    locationPickerMap.remove();
+                }
+
+                locationPickerMap = L.map('locationPickerMap').setView([14.5995, 120.9842], 12);
+                
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '© OpenStreetMap contributors',
+                    maxZoom: 19
+                }).addTo(locationPickerMap);
+
+                locationPickerMap.on('click', function(e) {
+                    const lat = e.latlng.lat.toFixed(6);
+                    const lng = e.latlng.lng.toFixed(6);
+                    
+                    if (locationMarker) {
+                        locationPickerMap.removeLayer(locationMarker);
+                    }
+                    
+                    locationMarker = L.marker([lat, lng]).addTo(locationPickerMap);
+                    
+                    document.getElementById('patientLat').value = lat;
+                    document.getElementById('patientLng').value = lng;
+                    document.getElementById('coordsDisplay').textContent = `${lat}, ${lng}`;
+                    document.getElementById('selectedCoordinates').classList.remove('hidden');
+                });
+
+                setTimeout(() => {
+                    locationPickerMap.invalidateSize();
+                }, 100);
+            }
+
+            function updateCityOptions(region) {
+                const citySelect = document.getElementById('patientCity');
+                const barangaySelect = document.getElementById('patientBarangay');
+                
+                citySelect.innerHTML = '<option value="">Select city</option>';
+                barangaySelect.innerHTML = '<option value="">Select barangay</option>';
+                
+                if (region && philippineLocations[region]) {
+                    const cities = Object.keys(philippineLocations[region].cities);
+                    cities.forEach(city => {
+                        const option = document.createElement('option');
+                        option.value = city;
+                        option.textContent = city;
+                        citySelect.appendChild(option);
+                    });
+                }
+            }
+
+            function updateBarangayOptions(region, city) {
+                const barangaySelect = document.getElementById('patientBarangay');
+                barangaySelect.innerHTML = '<option value="">Select barangay</option>';
+                
+                if (region && city && philippineLocations[region] && philippineLocations[region].cities[city]) {
+                    const barangays = philippineLocations[region].cities[city].barangays;
+                    barangays.forEach(barangay => {
+                        const option = document.createElement('option');
+                        option.value = barangay;
+                        option.textContent = barangay;
+                        barangaySelect.appendChild(option);
+                    });
+
+                    const coords = philippineLocations[region].cities[city].coords;
+                    if (locationPickerMap) {
+                        locationPickerMap.setView(coords, 14);
+                    }
+                }
+            }
+
+            function initializeDiseaseMap() {
+                if (diseaseMap) return;
+                
+                diseaseMap = L.map('diseaseMapContainer').setView([14.5995, 120.9842], 12);
+                
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '© OpenStreetMap contributors',
+                    maxZoom: 19
+                }).addTo(diseaseMap);
+
+                markerClusterGroup = L.markerClusterGroup({
+                    maxClusterRadius: 50,
+                    disableClusteringAtZoom: 16
+                }).addTo(diseaseMap);
+            }
+
+            async function processPatientQueue() {
+                if (isProcessingPatient || patientQueue.length === 0) return;
+                
+                isProcessingPatient = true;
+                const patientData = patientQueue.shift();
+                
+                try {
+                    await new Promise(resolve => setTimeout(resolve, 500));
+                    updateDashboardWithPatientData(patientData);
+                    processedCount++;
+                    updatePendingUpdates();
+                } catch (error) {
+                    console.error('Error processing patient:', error);
+                    patientQueue.unshift(patientData);
+                } finally {
+                    isProcessingPatient = false;
+                    if (patientQueue.length > 0) {
+                        setTimeout(processPatientQueue, 300);
+                    }
+                }
+            }
+
+            function updatePendingUpdates() {
+                document.getElementById('pendingUpdates').textContent = patientQueue.length;
+            }
+
+            function validatePatientData(patientData) {
+                const errors = [];
+                if (!patientData.name || patientData.name.trim() === '') errors.push('Patient name is required');
+                if (!patientData.location || patientData.location.trim() === '') errors.push('Location is required');
+                if (!patientData.condition || patientData.condition === '') errors.push('Condition is required');
+                if (!patientData.severity || patientData.severity === '') errors.push('Severity level is required');
+                if (!patientData.admissionDate || patientData.admissionDate === '') errors.push('Admission date is required');
+                if (!patientData.contact || patientData.contact.trim() === '') errors.push('Emergency contact is required');
+                return { isValid: errors.length === 0, errors };
+            }
+
+            function updateDiseaseMap() {
+                if (!diseaseMap) initializeDiseaseMap();
+
+                markerClusterGroup.clearLayers();
+                if (heatmapLayer) diseaseMap.removeLayer(heatmapLayer);
+
+                const locationMap = {};
+                const heatmapData = [];
+                
+                diseaseData.forEach(entry => {
+                    const location = entry.location;
+                    if (!locationMap[location]) {
+                        locationMap[location] = { 
+                            diseases: [], 
+                            totalCases: 0, 
+                            maxSeverity: 'Low',
+                            coordinates: entry.coordinates || [14.5995, 120.9842]
+                        };
+                    }
+                    
+                    const existingDisease = locationMap[location].diseases.find(d => d.name === entry.disease);
+                    if (existingDisease) {
+                        existingDisease.cases++;
+                    } else {
+                        locationMap[location].diseases.push({ name: entry.disease, cases: 1 });
+                    }
+                    locationMap[location].totalCases++;
+                    
+                    if (entry.severity === 'High' || locationMap[location].maxSeverity === 'Low') {
+                        locationMap[location].maxSeverity = entry.severity;
+                    } else if (entry.severity === 'Medium' && locationMap[location].maxSeverity !== 'High') {
+                        locationMap[location].maxSeverity = entry.severity;
+                    }
+
+                    if (locationMap[location].coordinates) {
+                        const intensity = entry.severity === 'High' ? 1 : entry.severity === 'Medium' ? 0.6 : 0.3;
+                        heatmapData.push([...locationMap[location].coordinates, intensity]);
+                    }
+                });
+
+                const getMarkerColor = (severity, cases) => {
+                    if (severity === 'High' || cases > 10) return '#ef4444';
+                    if (severity === 'Medium' || cases > 5) return '#eab308';
+                    return '#22c55e';
+                };
+
+                Object.entries(locationMap).forEach(([location, data]) => {
+                    if (!data.coordinates) return;
+
+                    const color = getMarkerColor(data.maxSeverity, data.totalCases);
+                    
+                    const customIcon = L.divIcon({
+                        html: `
+                            <div class="flex items-center justify-center w-12 h-12 rounded-full text-white font-bold text-lg shadow-lg" 
+                                style="background-color: ${color}; border: 3px solid white; box-shadow: 0 0 20px ${color}80;">
+                                ${data.totalCases}
+                            </div>
+                        `,
+                        iconSize: [48, 48],
+                        className: 'disease-marker'
+                    });
+
+                    const marker = L.marker(data.coordinates, { icon: customIcon });
+                    
+                    const popupContent = `
+                        <div class="font-semibold text-sm mb-2">${location}</div>
+                        <div class="text-xs space-y-1">
+                            <div>Total Cases: <span class="font-semibold">${data.totalCases}</span></div>
+                            <div>Severity: <span class="font-semibold">${data.maxSeverity}</span></div>
+                            <div class="mt-2 pt-2 border-t border-gray-300">
+                                ${data.diseases.map(d => `<div>${d.name}: ${d.cases}</div>`).join('')}
+                            </div>
+                        </div>
+                    `;
+                    
+                    marker.bindPopup(popupContent);
+                    markerClusterGroup.addLayer(marker);
+                });
+
+                if (heatmapData.length > 0) {
+                    heatmapLayer = L.heatLayer(heatmapData, {
+                        radius: 40,
+                        blur: 25,
+                        maxZoom: 17,
+                        gradient: {0.0: '#22c55e', 0.5: '#eab308', 1.0: '#ef4444'}
+                    }).addTo(diseaseMap);
+                }
+
+                if (markerClusterGroup.getLayers().length > 0) {
+                    diseaseMap.fitBounds(markerClusterGroup.getBounds().pad(0.1));
+                }
+
+                const topLocations = document.getElementById('topLocations');
+                const sortedLocations = Object.entries(locationMap)
+                    .sort((a, b) => b[1].totalCases - a[1].totalCases)
+                    .slice(0, 5);
+
+                if (sortedLocations.length > 0) {
+                    topLocations.innerHTML = sortedLocations.map(([location, data]) => `
+                        <div class="flex items-center justify-between p-2 bg-background rounded border border-border/30">
+                            <div>
+                                <div class="text-sm font-medium text-foreground">${location}</div>
+                                <div class="text-xs text-muted">${data.totalCases} cases</div>
+                            </div>
+                            <div class="w-2 h-2 rounded-full" style="background-color: ${getMarkerColor(data.maxSeverity, data.totalCases)}"></div>
+                        </div>
+                    `).join('');
+                } else {
+                    topLocations.innerHTML = '<p class="text-xs text-muted">No data available yet</p>';
+                }
+
+                const diseaseDistribution = document.getElementById('diseaseDistribution');
+                const diseaseCount = {};
+                Object.values(locationMap).forEach(data => {
+                    data.diseases.forEach(d => {
+                        diseaseCount[d.name] = (diseaseCount[d.name] || 0) + d.cases;
+                    });
+                });
+
+                const sortedDiseases = Object.entries(diseaseCount)
+                    .sort((a, b) => b[1] - a[1])
+                    .slice(0, 5);
+
+                if (sortedDiseases.length > 0) {
+                    diseaseDistribution.innerHTML = sortedDiseases.map(([disease, count]) => `
+                        <div class="flex items-center justify-between p-2 bg-background rounded border border-border/30">
+                            <div class="text-sm text-foreground">${disease}</div>
+                            <div class="text-sm font-semibold text-primary">${count}</div>
+                        </div>
+                    `).join('');
+                } else {
+                    diseaseDistribution.innerHTML = '<p class="text-xs text-muted">No data available yet</p>';
+                }
+            }
+
+
+            // Update patient chart with actual admission dates (one dot per patient)
+            function updatePatientChartWithDates() {
+                // Group patients by admission date
+                const dateCount = {};
+                patientsData.forEach(patient => {
+                    const admissionDate = patient.admissionDate;
+                    if (admissionDate) {
+                        const date = new Date(admissionDate);
+                        const fullDate = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+
+                        if (!dateCount[fullDate]) {
+                            dateCount[fullDate] = 0;
+                        }
+                        dateCount[fullDate]++;
+                    }
+                });
+
+                // Convert to chart data format
+                const labels = Object.keys(dateCount);
+                const data = Object.values(dateCount);
+
+                // Update chart to show only dots (scatter points)
+                chartsMap.patientsChart.data.labels = labels.length > 0 ? labels : [];
+                chartsMap.patientsChart.data.datasets[0].data = data.length > 0 ? data : [];
+                chartsMap.patientsChart.update();
+            }
+
+            function updateDashboardMetrics() {
+                const totalPatients = patientsData.length;
+                const criticalCases = patientsData.filter(p => p.severity === 'High').length;
+
+                document.getElementById('totalPatientsCount').textContent = totalPatients;
+                document.getElementById('totalPatientsStatus').textContent = totalPatients > 0 ? `+${totalPatients} this week` : 'Awaiting input';
+                document.getElementById('totalPatientsAvg').textContent = `Daily Avg: ${Math.ceil(totalPatients / 7)} patients`;
+
+                document.getElementById('criticalCasesCount').textContent = criticalCases;
+                document.getElementById('criticalCasesStatus').textContent = criticalCases > 0 ? `${criticalCases} requiring attention` : 'Awaiting input';
+                document.getElementById('criticalCasesCapacity').textContent = `ICU Capacity: ${Math.min(criticalCases * 10, 100)}%`;
+
+                const today = new Date().toISOString().split('T')[0];
+                const newPatientsToday = patientsData.filter(p => p.admissionDate === today).length;
+                document.getElementById('newPatientsToday').textContent = newPatientsToday;
+                document.getElementById('newPatientsTodayStatus').textContent = newPatientsToday > 0 ? `+${newPatientsToday} today` : 'Awaiting input';
+
+                if (chartsMap.patientsChart) {
+                    chartsMap.patientsChart.data.datasets[0].data = [totalPatients, totalPatients, totalPatients, totalPatients, totalPatients, totalPatients, totalPatients];
+                    chartsMap.patientsChart.update();
+                }
+
+                if (chartsMap.criticalChart) {
+                    chartsMap.criticalChart.data.datasets[0].data = [criticalCases, criticalCases, criticalCases, criticalCases, criticalCases, criticalCases, criticalCases];
+                    chartsMap.criticalChart.update();
+                }
+            }
+
+            function updateDashboardWithPatientData(patientData) {
+                patientsData.push(patientData);
+
+                const patientTableBody = document.getElementById('patientTableBody');
+                const newRow = document.createElement('tr');
+                newRow.className = 'border-b border-border hover:bg-secondary/50 transition-colors';
+                newRow.innerHTML = `
+                    <td class="py-3 px-4 text-sm text-foreground">${patientData.id}</td>
+                    <td class="py-3 px-4 text-sm text-foreground">${patientData.name}</td>
+                    <td class="py-3 px-4 text-sm text-foreground">${patientData.location}</td>
+                    <td class="py-3 px-4 text-sm text-foreground">${patientData.condition}</td>
+                    <td class="py-3 px-4 text-sm">
+                        <span class="px-2 py-1 rounded-full text-xs font-medium ${
+                            patientData.severity === 'High' ? 'bg-red-500/10 text-red-500 border border-red-500/20' :
+                            patientData.severity === 'Medium' ? 'bg-yellow-500/10 text-yellow-500 border border-yellow-500/20' :
+                            'bg-green-500/10 text-green-500 border border-green-500/20'
+                        }">
+                            ${patientData.severity}
+                        </span>
+                    </td>
+                    <td class="py-3 px-4 text-sm text-foreground">${patientData.admissionDate}</td>
+                `;
+                patientTableBody.appendChild(newRow);
+
+                if (patientData.updateDiseaseTracking) {
+                    addDiseaseTrackingEntry(patientData);
+                }
+
+                updateDashboardMetrics();
+            }
+
+            function addDiseaseTrackingEntry(patientData) {
+                const diseaseEntry = {
+                    location: patientData.location,
+                    disease: patientData.condition,
+                    severity: patientData.severity,
+                    coordinates: patientData.coordinates,
+                    timestamp: new Date().toLocaleString()
+                };
+                diseaseData.push(diseaseEntry);
+                updateDiseaseMap();
+            }
+
+            document.addEventListener('DOMContentLoaded', () => {
+                const yesHealthcareBtn = document.getElementById('yesHealthcareBtn');
+                const noHealthcareBtn = document.getElementById('noHealthcareBtn');
+                const backToRoleBtn = document.getElementById('backToRoleBtn');
+                const logoutBtn = document.getElementById('logoutBtn');
+                const loginForm = document.getElementById('loginForm');
+                const errorMessage = document.getElementById('errorMessage');
+                const userRoleBadge = document.getElementById('userRoleBadge');
+                const logoutBtnText = document.getElementById('logoutBtnText');
+                const readOnlyNotice = document.getElementById('readOnlyNotice');
+                const tabButtons = document.querySelectorAll('.tab-btn');
+                const tabContents = document.querySelectorAll('.tab-content');
+
+                const showAlertFormBtn = document.getElementById('showAlertFormBtn');
+                const alertFormContainer = document.getElementById('alertFormContainer');
+                const cancelAlertFormBtn = document.getElementById('cancelAlertFormBtn');
+                const alertForm = document.getElementById('alertForm');
+
+                const patientRegionSelect = document.getElementById('patientRegion');
+                const patientCitySelect = document.getElementById('patientCity');
+                const patientBarangaySelect = document.getElementById('patientBarangay');
+                const moduleFilter = document.getElementById('moduleFilter');
+
+                if (patientRegionSelect) {
+                    patientRegionSelect.addEventListener('change', (e) => {
+                        updateCityOptions(e.target.value);
+                    });
+                }
+
+                if (patientCitySelect) {
+                    patientCitySelect.addEventListener('change', (e) => {
+                        const region = patientRegionSelect.value;
+                        updateBarangayOptions(region, e.target.value);
+                    });
+                }
+
+                if (moduleFilter) {
+                    moduleFilter.addEventListener('change', (e) => {
+                        renderTrainingModules(e.target.value);
+                    });
+                }
+
+                if (showAlertFormBtn) {
+                    showAlertFormBtn.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        alertFormContainer.classList.toggle('hidden');
+                        if (!alertFormContainer.classList.contains('hidden')) {
+                            document.getElementById('alertTitle').focus();
+                        }
+                    });
+                }
+
+                if (cancelAlertFormBtn) {
+                    cancelAlertFormBtn.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        alertFormContainer.classList.add('hidden');
+                        alertForm.reset();
+                    });
+                }
+
+                if (alertForm) {
+                    alertForm.addEventListener('submit', (e) => {
+                        e.preventDefault();
+
+                        const newAlert = {
+                            id: 'alert-' + Date.now(),
+                            title: document.getElementById('alertTitle').value.trim(),
+                            description: document.getElementById('alertDescription').value.trim(),
+                            priority: document.getElementById('alertPriority').value,
+                            actionLabel: document.getElementById('alertActionLabel').value.trim(),
+                            timestamp: new Date().toISOString()
+                        };
+
+                        if (!newAlert.title || !newAlert.description) {
+                            alert('Please fill in both title and description');
+                            return;
+                        }
+
+                        alertsData.push(newAlert);
+                        renderAlerts();
+                        
+                        alertForm.reset();
+                        alertFormContainer.classList.add('hidden');
+                        
+                        alert('Alert added successfully!');
+                    });
+                }
+
+                yesHealthcareBtn.addEventListener('click', () => {
+                    showView('loginView');
+                    errorMessage.classList.add('hidden');
+                    errorMessage.textContent = '';
+                });
+
+                noHealthcareBtn.addEventListener('click', () => {
+                    userRoleBadge.textContent = 'Viewer';
+                    userRoleBadge.className = 'px-3 py-1 text-sm rounded-full bg-blue-500/10 text-blue-500 border border-blue-500/20';
+                    logoutBtnText.textContent = 'Go Back';
+                    readOnlyNotice.classList.remove('hidden');
+
+                    document.querySelectorAll('.healthcare-only').forEach(el => {
+                        el.style.display = 'none';
+                    });
+
+                    showView('dashboardView');
+                    lucide.createIcons();
+                    setTimeout(() => {
+                        initializeDiseaseMap();
+                        renderAlerts();
+                        renderTrainingModules();
+                    }, 100);
+                });
+
+                backToRoleBtn.addEventListener('click', () => {
+                    showView('roleSelectionView');
+                });
+
+                logoutBtn.addEventListener('click', () => {
+                    showView('roleSelectionView');
+                    loginForm.reset();
+                    errorMessage.classList.add('hidden');
+                });
+
+                loginForm.addEventListener('submit', (e) => {
+                    e.preventDefault();
+
+                    const emailInput = document.getElementById('email');
+                    const passwordInput = document.getElementById('password');
+                    const email = (emailInput.value || '').trim();
+                    const password = (passwordInput.value || '').trim();
+
+                    // Basic checks
+                    if (email === '' || password === '') {
+                        errorMessage.textContent = 'Please enter both email and password.';
+                        errorMessage.classList.remove('hidden');
+                        return;
+                    }
+
+                    // Ensure email contains '@'
+                    if (!email.includes('@')) {
+                        errorMessage.textContent = 'Please enter a valid email address (must include @).';
+                        errorMessage.classList.remove('hidden');
+                        emailInput.focus();
+                        return;
+                    }
+
+                    // Optional: stronger but simple email pattern (user can decide to use it)
+                    const simpleEmailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                    if (!simpleEmailRegex.test(email)) {
+                        errorMessage.textContent = 'Please enter a valid email address.';
+                        errorMessage.classList.remove('hidden');
+                        emailInput.focus();
+                        return;
+                    }
+
+                    // Optional: password minimum (recommended)
+                    if (password.length < 6) {
+                        errorMessage.textContent = 'Password must be at least 6 characters.';
+                        errorMessage.classList.remove('hidden');
+                        passwordInput.focus();
+                        return;
+                    }
+
+                    // Clear any previous error
+                    errorMessage.classList.add('hidden');
+                    errorMessage.textContent = '';
+
+                    // Proceed with the existing post-login UI updates (no change to logic)
+                    userRoleBadge.textContent = 'Healthcare Worker';
+                    userRoleBadge.className = 'px-3 py-1 text-sm rounded-full bg-green-500/10 text-green-500 border border-green-500/20';
+                    logoutBtnText.textContent = 'Log Out';
+                    readOnlyNotice.classList.add('hidden');
+
+                    document.querySelectorAll('.healthcare-only').forEach(el => {
+                        el.style.display = '';
+                    });
+
+                    loginForm.reset();
+
+                    showView('dashboardView');
+                    lucide.createIcons();
+                    setTimeout(() => {
+                        initializeDiseaseMap();
+                        renderAlerts();
+                        renderTrainingModules();
+                    }, 100);
+                    });
+
+                tabButtons.forEach(button => {
+                    button.addEventListener('click', () => {
+                        const targetTab = button.getAttribute('data-tab');
+
+                        tabButtons.forEach(btn => btn.classList.remove('tab-active'));
+                        tabContents.forEach(content => content.classList.remove('active'));
+
+                        button.classList.add('tab-active');
+                        document.getElementById(targetTab).classList.add('active');
+                        
+                        lucide.createIcons();
+                        
+                        if (targetTab === 'dashboard' && diseaseMap) {
+                            setTimeout(() => diseaseMap.invalidateSize(), 100);
+                        }
+
+                        if (targetTab === 'patients' && !locationPickerMap) {
+                            setTimeout(() => initializeLocationPicker(), 100);
+                        }
+
+                        if (targetTab === 'training') {
+                            renderTrainingModules(moduleFilter ? moduleFilter.value : 'all');
+                        }
+                    });
+                });
+
+                const patientForm = document.getElementById('patientForm');
+                if (patientForm) {
+                    patientForm.addEventListener('submit', (e) => {
+                        e.preventDefault();
+
+                        const region = document.getElementById('patientRegion').value;
+                        const city = document.getElementById('patientCity').value;
+                        const barangay = document.getElementById('patientBarangay').value;
+                        const street = document.getElementById('patientStreet').value.trim();
+                        const lat = document.getElementById('patientLat').value;
+                        const lng = document.getElementById('patientLng').value;
+
+                        if (!region || !city || !barangay) {
+                            alert('Please select region, city, and barangay for patient location.');
+                            return;
+                        }
+
+                        const fullLocation = `${barangay}, ${city}, ${region}`;
+                        let coordinates = null;
+
+                        if (lat && lng) {
+                            coordinates = [parseFloat(lat), parseFloat(lng)];
+                        } else if (philippineLocations[region] && philippineLocations[region].cities[city]) {
+                            coordinates = philippineLocations[region].cities[city].coords;
+                        }
+
+                        const patientData = {
+                            id: 'P' + Date.now(),
+                            name: document.getElementById('patientName').value.trim(),
+                            dob: document.getElementById('patientDOB').value,
+                            location: fullLocation,
+                            street: street,
+                            coordinates: coordinates,
+                            condition: document.getElementById('patientCondition').value,
+                            severity: document.getElementById('patientSeverity').value,
+                            contact: document.getElementById('patientContact').value.trim(),
+                            insurance: document.getElementById('patientInsurance').value,
+                            admissionDate: document.getElementById('patientAdmission').value,
+                            notes: document.getElementById('patientNotes').value,
+                            updateDiseaseTracking: document.getElementById('updateDiseaseTracking').checked
+                        };
+
+                        const validation = validatePatientData(patientData);
+                        if (!validation.isValid) {
+                            alert('Please fill in all required fields:\n' + validation.errors.join('\n'));
+                            return;
+                        }
+
+                        patientQueue.push(patientData);
+                        updatePendingUpdates();
+                        processPatientQueue();
+
+                        const submitBtn = patientForm.querySelector('button[type="submit"]');
+                        submitBtn.disabled = true;
+                        submitBtn.textContent = 'Processing...';
+
+                        patientForm.reset();
+                        document.getElementById('selectedCoordinates').classList.add('hidden');
+                        if (locationMarker) {
+                            locationPickerMap.removeLayer(locationMarker);
+                            locationMarker = null;
+                        }
+
+                        setTimeout(() => {
+                            submitBtn.disabled = false;
+                            submitBtn.textContent = 'Add Patient';
+                        }, 1000);
+
+                        alert('Patient added to queue and will be processed shortly!');
+                        document.querySelector('[data-tab="dashboard"]').click();
+                    });
+                }
+
+                const resourceForm = document.getElementById('resourceForm');
+                if (resourceForm) {
+                    resourceForm.addEventListener('submit', (e) => {
+                        e.preventDefault();
+
+                        const resource = {
+                            id: 'R' + Date.now(),
+                            name: document.getElementById('resourceName').value.trim(),
+                            category: document.getElementById('resourceCategory').value,
+                            stock: parseInt(document.getElementById('resourceStock').value),
+                            unit: document.getElementById('resourceUnit').value.trim(),
+                            threshold: parseInt(document.getElementById('resourceThreshold').value),
+                            usageRate: parseFloat(document.getElementById('resourceUsageRate').value),
+                            addedDate: new Date().toLocaleDateString()
+                        };
+
+                        if (!resource.name || !resource.category || resource.stock < 0 || !resource.unit || resource.threshold < 0) {
+                            alert('Please fill in all required fields with valid values');
+                            return;
+                        }
+
+                        resourcesData.push(resource);
+                        updateResourceDashboard();
+                        resourceForm.reset();
+                        alert('Resource added successfully!');
+                    });
+                }
+
+                lucide.createIcons();
+                
+                const chartConfig = {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { ticks: { display: false }, grid: { display: false }, border: { display: false } },
+                        x: { ticks: { display: false }, grid: { display: false }, border: { display: false } }
+                    },
+                    tension: 0.4
+                };
+
+                chartsMap.patientsChart = new Chart(document.getElementById('patientsChart'), {
+                    type: 'line',
+                    data: {
+                        labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+                        datasets: [{
+                            label: 'Patients',
+                            data: [0, 0, 0, 0, 0, 0, 0],
+                            borderColor: '#3b82f6',
+                            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                            borderWidth: 2,
+                            fill: true
+                        }]
+                    },
+                    options: chartConfig
+                });
+
+                chartsMap.criticalChart = new Chart(document.getElementById('criticalChart'), {
+                    type: 'line',
+                    data: {
+                        labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+                        datasets: [{
+                            label: 'Critical Cases',
+                            data: [0, 0, 0, 0, 0, 0, 0],
+                            borderColor: '#ef4444',
+                            backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                            borderWidth: 2,
+                            fill: true
+                        }]
+                    },
+                    options: chartConfig
+                });
+
+                chartsMap.resourceTrendChart = new Chart(document.getElementById('resourceTrendChart'), {
+                    type: 'bar',
+                    data: {
+                        labels: [],
+                        datasets: [{
+                            label: 'Total Stock Units',
+                            data: [],
+                            backgroundColor: '#8b5cf6',
+                            borderRadius: 4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { 
+                            legend: { display: true, position: 'top' }
+                        },
+                        scales: {
+                            y: { beginAtZero: true }
+                        }
+                    }
+                });
+
+                renderAlerts();
+                renderTrainingModules();
+
+                // Check for expired alerts every 5 minutes
+                setInterval(checkAndDismissExpiredAlerts, 5 * 60 * 1000);
+                checkAndDismissExpiredAlerts();
+            });
+        </script>
+    </body>
+    </html>
