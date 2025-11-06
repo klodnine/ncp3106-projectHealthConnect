@@ -1,1 +1,0 @@
-# ncp3106-projectHealthConnect
